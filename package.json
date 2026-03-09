@@ -1,0 +1,93 @@
+{
+  "name": "git-message-generator-by-arg-rabbi",
+  "displayName": "Git Message Generator By ARG RABBI",
+  "description": "Generate conventional commit messages for Git and GitHub repositories from staged changes in VS Code.",
+  "version": "0.0.1",
+  "publisher": "arg-rabbi",
+  "icon": "assets/logo.png",
+  "engines": {
+    "vscode": "^1.95.0"
+  },
+  "categories": [
+    "Source Control"
+  ],
+  "activationEvents": [
+    "workspaceContains:.git",
+    "onCommand:commitGen.generate"
+  ],
+  "main": "./dist/extension.js",
+  "extensionDependencies": [
+    "vscode.git"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "commitGen.generate",
+        "title": "Generate Git Message",
+        "icon": {
+          "light": "./assets/icon-light.svg",
+          "dark": "./assets/icon-dark.svg"
+        }
+      }
+    ],
+    "menus": {
+      "scm/title": [
+        {
+          "command": "commitGen.generate",
+          "when": "scmProvider == git",
+          "group": "navigation"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "commitGen.generate",
+          "when": "workspaceFolderCount > 0"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Git Message Generator By ARG RABBI",
+      "properties": {
+        "commitGen.maxHeaderLength": {
+          "type": "integer",
+          "default": 72,
+          "minimum": 20,
+          "description": "Maximum generated conventional commit header length."
+        },
+        "commitGen.scopeMapping": {
+          "type": "object",
+          "default": {},
+          "description": "Custom path-to-scope mapping. Example: { \"src/payments/\": \"payments\" }"
+        },
+        "commitGen.typeOverrides": {
+          "type": "object",
+          "default": {},
+          "description": "Force a conventional commit type for matching paths. Example: { \"migrations/\": \"feat\" }"
+        },
+        "commitGen.showConfidence": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show confidence information after generating a message."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "tsc -p .",
+    "watch": "tsc -w -p .",
+    "package": "npx @vscode/vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.11",
+    "@types/vscode": "^1.95.0",
+    "@vscode/vsce": "^3.7.1",
+    "typescript": "^5.8.2"
+  },
+  "dependencies": {
+    "parse-diff": "^0.11.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/itrabbi24/Git_Message_Generator.git"
+  }
+}
