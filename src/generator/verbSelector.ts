@@ -2,16 +2,16 @@ import { AnalyzedFile, CommitType, FileStatus } from "../types";
 
 const TYPE_VERBS: Record<CommitType, string[]> = {
   feat: ["add", "implement", "introduce"],
-  fix: ["fix", "resolve", "handle"],
+  fix: ["resolve", "handle", "correct"],
   docs: ["update", "document", "clarify"],
   style: ["format", "style", "clean"],
-  refactor: ["refactor", "restructure", "simplify"],
+  refactor: ["restructure", "simplify", "reorganize"],
   perf: ["optimize", "cache", "improve"],
   test: ["add", "update", "cover"],
   build: ["update", "configure", "adjust"],
   ci: ["add", "update", "configure"],
   chore: ["update", "maintain", "adjust"],
-  revert: ["revert", "undo", "restore"]
+  revert: ["undo", "restore", "roll back"]
 };
 
 // Maps git file status to a natural-language verb
