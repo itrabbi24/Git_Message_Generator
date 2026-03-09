@@ -2,7 +2,7 @@
   "name": "git-message-generator-by-arg-rabbi",
   "displayName": "Git Message Generator By ARG RABBI",
   "description": "Generate conventional commit messages for Git and GitHub repositories from staged changes in VS Code.",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "publisher": "argrabbi",
   "icon": "assets/logo.png",
   "homepage": "https://github.com/itrabbi24/Git_Message_Generator",
