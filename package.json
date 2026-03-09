@@ -3,13 +3,29 @@
   "displayName": "Git Message Generator By ARG RABBI",
   "description": "Generate conventional commit messages for Git and GitHub repositories from staged changes in VS Code.",
   "version": "0.0.1",
-  "publisher": "arg-rabbi",
+  "publisher": "argrabbi",
   "icon": "assets/logo.png",
+  "homepage": "https://github.com/itrabbi24/Git_Message_Generator",
+  "bugs": {
+    "url": "https://github.com/itrabbi24/Git_Message_Generator/issues"
+  },
+  "galleryBanner": {
+    "color": "#0F172A",
+    "theme": "dark"
+  },
   "engines": {
     "vscode": "^1.95.0"
   },
   "categories": [
-    "Source Control"
+    "SCM Providers"
+  ],
+  "keywords": [
+    "git",
+    "github",
+    "commit",
+    "conventional commits",
+    "source control",
+    "commit message"
   ],
   "activationEvents": [
     "workspaceContains:.git",
