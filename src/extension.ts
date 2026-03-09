@@ -5,7 +5,7 @@ import { analyzeMetadata } from "./analyzer/metadataAnalyzer";
 import { detectScope } from "./analyzer/scopeResolver";
 import { getCommitGenConfig } from "./config/configuration";
 import { buildMessage, composeDescription } from "./generator/messageComposer";
-import { getStagedContext } from "./git/gitService";
+import { getChangeContext } from "./git/gitService";
 import { combineScores, resolveType } from "./scorer/commitScorer";
 import { AnalyzedFile, GenerationResult, Signal } from "./types";
 
@@ -56,22 +56,23 @@ function mergeSignals(files: AnalyzedFile[], metadataSignals: Signal[]): Generat
 }
 
 async function generateCommitMessage(): Promise<void> {
-  const staged = await getStagedContext();
-  if (!staged) {
+  const config = getCommitGenConfig();
+  const changeContext = await getChangeContext(config.includeWorkingTreeWhenNoStaged);
+  if (!changeContext) {
     vscode.window.showErrorMessage("Git repository not available.");
     return;
   }
 
-  if (staged.stagedChanges.length === 0) {
-    vscode.window.showInformationMessage("No staged changes found.");
+  if (changeContext.changes.length === 0) {
+    vscode.window.showInformationMessage("No staged or unstaged changes found.");
     return;
   }
 
-  const parsedFiles = parseFiles(staged.rawDiff);
+  const parsedFiles = parseFiles(changeContext.rawDiff);
   const fileMap = new Map(parsedFiles.map((file) => [file.path, file]));
 
-  const analyzedFiles: AnalyzedFile[] = staged.stagedChanges.map((change) => {
-    const relativePath = normalizeRepoRelative(staged.repository.rootUri.fsPath, change.uri);
+  const analyzedFiles: AnalyzedFile[] = changeContext.changes.map((change) => {
+    const relativePath = normalizeRepoRelative(changeContext.repository.rootUri.fsPath, change.uri);
     const existing = fileMap.get(relativePath) ?? {
       path: relativePath,
       status: statusToLetter(change.status),
@@ -95,12 +96,17 @@ async function generateCommitMessage(): Promise<void> {
     };
   });
 
-  const result = mergeSignals(analyzedFiles, analyzeMetadata(staged.stagedChanges));
-  staged.repository.inputBox.value = result.message;
+  const result = mergeSignals(analyzedFiles, analyzeMetadata(changeContext.changes));
+  changeContext.repository.inputBox.value = result.message;
 
-  const config = getCommitGenConfig();
   if (config.showConfidence) {
     const percent = Math.round(result.confidence * 100);
+    if (changeContext.source === "workingTree") {
+      vscode.window.showInformationMessage(
+        `Generated from unstaged changes: ${result.message} (${percent}% confidence)`
+      );
+      return;
+    }
     vscode.window.showInformationMessage(`Generated ${result.message} (${percent}% confidence)`);
   }
 }

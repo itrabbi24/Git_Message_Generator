@@ -1,10 +1,11 @@
 import * as vscode from "vscode";
 import { Change, GitAPI, GitExtension, Repository, Status } from "./git";
 
-export interface StagedContext {
+export interface ChangeContext {
   repository: Repository;
-  stagedChanges: Change[];
+  changes: Change[];
   rawDiff: string;
+  source: "staged" | "workingTree";
 }
 
 export function getGitApi(): GitAPI | undefined {
@@ -34,13 +35,8 @@ export async function getRepositoryForContext(): Promise<Repository | undefined>
   return api.repositories[0];
 }
 
-export async function getStagedContext(): Promise<StagedContext | undefined> {
-  const repository = await getRepositoryForContext();
-  if (!repository) {
-    return undefined;
-  }
-
-  const stagedChanges = repository.state.indexChanges.filter((change) =>
+function filterIndexChanges(changes: Change[]): Change[] {
+  return changes.filter((change) =>
     [
       Status.INDEX_MODIFIED,
       Status.INDEX_ADDED,
@@ -52,7 +48,33 @@ export async function getStagedContext(): Promise<StagedContext | undefined> {
       Status.INTENT_TO_RENAME
     ].includes(change.status)
   );
+}
 
-  const rawDiff = await repository.diff(true);
-  return { repository, stagedChanges, rawDiff };
+function filterWorkingTreeChanges(changes: Change[]): Change[] {
+  return changes.filter((change) =>
+    [Status.MODIFIED, Status.DELETED, Status.UNTRACKED, Status.TYPE_CHANGED, Status.BOTH_MODIFIED].includes(
+      change.status
+    )
+  );
+}
+
+export async function getChangeContext(includeWorkingTreeWhenNoStaged: boolean): Promise<ChangeContext | undefined> {
+  const repository = await getRepositoryForContext();
+  if (!repository) {
+    return undefined;
+  }
+
+  const stagedChanges = filterIndexChanges(repository.state.indexChanges);
+  if (stagedChanges.length > 0) {
+    const rawDiff = await repository.diff(true);
+    return { repository, changes: stagedChanges, rawDiff, source: "staged" };
+  }
+
+  if (!includeWorkingTreeWhenNoStaged) {
+    return { repository, changes: [], rawDiff: "", source: "staged" };
+  }
+
+  const workingTreeChanges = filterWorkingTreeChanges(repository.state.workingTreeChanges ?? []);
+  const rawDiff = workingTreeChanges.length > 0 ? await repository.diff(false) : "";
+  return { repository, changes: workingTreeChanges, rawDiff, source: "workingTree" };
 }

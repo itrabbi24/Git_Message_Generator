@@ -18,6 +18,7 @@ export interface Repository {
 
 export interface RepositoryState {
   indexChanges: Change[];
+  workingTreeChanges: Change[];
 }
 
 export interface Change {

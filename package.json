@@ -84,6 +84,11 @@
           "type": "boolean",
           "default": true,
           "description": "Show confidence information after generating a message."
+        },
+        "commitGen.includeWorkingTreeWhenNoStaged": {
+          "type": "boolean",
+          "default": true,
+          "description": "Use unstaged working-tree changes when no staged changes are available."
         }
       }
     }

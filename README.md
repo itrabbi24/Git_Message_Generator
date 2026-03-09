@@ -1,7 +1,5 @@
 # Git Message Generator By ARG RABBI
 
-![Git Message Generator By ARG RABBI](./assets/logo.png)
-
 Generate conventional commit messages inside VS Code from staged Git changes using a rule-based engine built for real projects, including GitHub-hosted repositories cloned locally.
 
 ## Overview
@@ -131,6 +129,12 @@ Example:
 - Type: `boolean`
 - Default: `true`
 - Shows a notification with the generated message confidence after generation.
+
+### `commitGen.includeWorkingTreeWhenNoStaged`
+
+- Type: `boolean`
+- Default: `true`
+- Uses unstaged working-tree changes when no staged changes are found, so generation still works without manual staging.
 
 ## Detection Examples
 

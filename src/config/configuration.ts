@@ -6,6 +6,7 @@ export interface CommitGenConfig {
   scopeMapping: Record<string, string>;
   typeOverrides: Record<string, CommitType>;
   showConfidence: boolean;
+  includeWorkingTreeWhenNoStaged: boolean;
 }
 
 export function getCommitGenConfig(): CommitGenConfig {
@@ -14,6 +15,7 @@ export function getCommitGenConfig(): CommitGenConfig {
     maxHeaderLength: config.get<number>("maxHeaderLength", 72),
     scopeMapping: config.get<Record<string, string>>("scopeMapping", {}),
     typeOverrides: config.get<Record<string, CommitType>>("typeOverrides", {}),
-    showConfidence: config.get<boolean>("showConfidence", true)
+    showConfidence: config.get<boolean>("showConfidence", true),
+    includeWorkingTreeWhenNoStaged: config.get<boolean>("includeWorkingTreeWhenNoStaged", true)
   };
 }
