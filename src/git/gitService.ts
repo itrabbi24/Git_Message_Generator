@@ -64,6 +64,13 @@ export async function getChangeContext(includeWorkingTreeWhenNoStaged: boolean):
     return undefined;
   }
 
+  // Refresh repository state so indexChanges/workingTreeChanges are up to date
+  try {
+    await repository.status();
+  } catch {
+    // Non-fatal: proceed with whatever state is available
+  }
+
   const stagedChanges = filterIndexChanges(repository.state.indexChanges);
   if (stagedChanges.length > 0) {
     const rawDiff = await repository.diff(true);

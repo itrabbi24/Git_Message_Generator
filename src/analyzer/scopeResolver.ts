@@ -1,5 +1,5 @@
 import { getCommitGenConfig } from "../config/configuration";
-import { MEANINGFUL_DIRS } from "../utils/patterns";
+import { isDependencyFile, isLockFile, MEANINGFUL_DIRS } from "../utils/patterns";
 
 function normalizePath(filePath: string): string {
   return filePath.replace(/\\/g, "/");
@@ -19,7 +19,55 @@ function collectScopes(filePaths: string[], prefix: string): Set<string> {
   return scopes;
 }
 
-export function detectScope(filePaths: string[]): string | null {
+function collectScopeCounts(filePaths: string[], extractor: (filePath: string) => string | null): Map<string, number> {
+  const counts = new Map<string, number>();
+  for (const filePath of filePaths) {
+    const scope = extractor(filePath);
+    if (!scope) {
+      continue;
+    }
+    counts.set(scope, (counts.get(scope) ?? 0) + 1);
+  }
+  return counts;
+}
+
+function chooseScope(counts: Map<string, number>): string | null {
+  if (counts.size === 0) {
+    return null;
+  }
+  if (counts.size === 1) {
+    return [...counts.keys()][0];
+  }
+
+  const sorted = [...counts.entries()].sort((a, b) => b[1] - a[1]);
+  const total = sorted.reduce((sum, [, count]) => sum + count, 0);
+  const [topScope, topCount] = sorted[0];
+
+  if (topCount / total >= 0.6) {
+    return topScope;
+  }
+  if (counts.size <= 3) {
+    return sorted.map(([scope]) => scope).sort().join(",");
+  }
+  return null;
+}
+
+export function detectScope(filePaths: string[], isDepsOnly = false): string | null {
+  if (isDepsOnly && filePaths.length > 0) {
+    return "deps";
+  }
+
+  // Auto-detect deps-only from paths
+  if (
+    filePaths.length > 0 &&
+    filePaths.every((p) => {
+      const name = normalizePath(p).split("/").pop()?.toLowerCase() ?? "";
+      return isDependencyFile(name) || isLockFile(name);
+    })
+  ) {
+    return "deps";
+  }
+
   const config = getCommitGenConfig();
   const normalizedPaths = filePaths.map(normalizePath);
 
@@ -30,29 +78,38 @@ export function detectScope(filePaths: string[]): string | null {
   }
 
   for (const root of ["packages/", "apps/", "libs/", "modules/", "services/"]) {
-    const scopes = collectScopes(normalizedPaths, root);
-    if (scopes.size === 1) {
-      return [...scopes][0];
-    }
-    if (scopes.size > 1 && scopes.size <= 3) {
-      return [...scopes].sort().join(",");
+    const counts = collectScopeCounts(normalizedPaths, (filePath) => {
+      if (!filePath.startsWith(root)) {
+        return null;
+      }
+      const scope = filePath.slice(root.length).split("/")[0];
+      return scope ? scope.toLowerCase() : null;
+    });
+    const selected = chooseScope(counts);
+    if (selected) {
+      return selected;
     }
   }
 
-  const srcScopes = collectScopes(normalizedPaths, "src/");
-  if (srcScopes.size === 1) {
-    return [...srcScopes][0];
+  const srcCounts = collectScopeCounts(normalizedPaths, (filePath) => {
+    if (!filePath.startsWith("src/")) {
+      return null;
+    }
+    const scope = filePath.slice("src/".length).split("/")[0];
+    return scope ? scope.toLowerCase() : null;
+  });
+  const srcScope = chooseScope(srcCounts);
+  if (srcScope) {
+    return srcScope;
   }
 
-  const componentScopes = new Set<string>();
-  for (const filePath of normalizedPaths) {
+  const componentCounts = collectScopeCounts(normalizedPaths, (filePath) => {
     const match = filePath.match(/^(?:src\/)?components\/([^/]+)\//);
-    if (match?.[1]) {
-      componentScopes.add(match[1].toLowerCase());
-    }
-  }
-  if (componentScopes.size === 1) {
-    return [...componentScopes][0];
+    return match?.[1] ? match[1].toLowerCase() : null;
+  });
+  const componentScope = chooseScope(componentCounts);
+  if (componentScope) {
+    return componentScope;
   }
 
   for (const filePath of normalizedPaths) {

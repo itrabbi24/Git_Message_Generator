@@ -1,35 +1,47 @@
 import * as vscode from "vscode";
+import * as path from "path";
 import { classifyByPath, defaultSourceType } from "./analyzer/fileClassifier";
 import { parseFiles } from "./analyzer/diffAnalyzer";
 import { analyzeMetadata } from "./analyzer/metadataAnalyzer";
 import { detectScope } from "./analyzer/scopeResolver";
 import { getCommitGenConfig } from "./config/configuration";
 import { buildMessage, composeDescription } from "./generator/messageComposer";
+import { Status } from "./git/git";
 import { getChangeContext } from "./git/gitService";
 import { combineScores, resolveType } from "./scorer/commitScorer";
-import { AnalyzedFile, GenerationResult, Signal } from "./types";
+import { AnalyzedFile, FileStatus, GenerationResult, MetadataResult, Signal } from "./types";
 
 function normalizeRepoRelative(rootPath: string, filePath: vscode.Uri): string {
-  return vscode.workspace.asRelativePath(filePath, false).replace(/\\/g, "/").replace(`${rootPath}/`, "");
+  return path.relative(rootPath, filePath.fsPath).replace(/\\/g, "/");
 }
 
-function statusToLetter(status: number): string {
+function statusToLetter(status: number): FileStatus {
   switch (status) {
-    case 1:
-    case 9:
+    case Status.INDEX_ADDED:
+    case Status.INTENT_TO_ADD:
+    case Status.UNTRACKED:
+    case Status.ADDED_BY_US:
+    case Status.ADDED_BY_THEM:
+    case Status.BOTH_ADDED:
       return "A";
-    case 2:
+    case Status.INDEX_DELETED:
+    case Status.DELETED:
+    case Status.DELETED_BY_US:
+    case Status.DELETED_BY_THEM:
+    case Status.BOTH_DELETED:
       return "D";
-    case 3:
-    case 10:
+    case Status.INDEX_RENAMED:
+    case Status.INTENT_TO_RENAME:
       return "R";
+    case Status.INDEX_COPIED:
+      return "C";
     default:
       return "M";
   }
 }
 
-function mergeSignals(files: AnalyzedFile[], metadataSignals: Signal[]): GenerationResult {
-  const allSignals = files.flatMap((file) => file.signals).concat(metadataSignals);
+function mergeSignals(files: AnalyzedFile[], metadata: MetadataResult): GenerationResult {
+  const allSignals = files.flatMap((file) => file.signals).concat(metadata.signals);
   if (allSignals.length === 0) {
     allSignals.push({
       type: defaultSourceType(),
@@ -41,7 +53,7 @@ function mergeSignals(files: AnalyzedFile[], metadataSignals: Signal[]): Generat
 
   const scores = combineScores(allSignals);
   const resolved = resolveType(scores);
-  const scope = detectScope(files.map((file) => file.path));
+  const scope = detectScope(files.map((file) => file.path), metadata.isDepsOnly);
   const config = getCommitGenConfig();
   const description = composeDescription(files, resolved.type, scope);
   const message = buildMessage(resolved.type, scope, description, config.maxHeaderLength);
@@ -63,25 +75,42 @@ async function generateCommitMessage(): Promise<void> {
     return;
   }
 
+  // Skip generation for merge/revert commits — git already provides these messages
+  const existingMessage = changeContext.repository.inputBox.value ?? "";
+  if (existingMessage.startsWith("Merge ") || existingMessage.startsWith('Revert "')) {
+    vscode.window.showInformationMessage("Merge/revert commit detected — keeping existing message.");
+    return;
+  }
+
   if (changeContext.changes.length === 0) {
-    vscode.window.showInformationMessage("No staged or unstaged changes found.");
+    vscode.window.showInformationMessage("No staged or unstaged changes found. Stage some files and try again.");
     return;
   }
 
   const parsedFiles = parseFiles(changeContext.rawDiff);
-  const fileMap = new Map(parsedFiles.map((file) => [file.path, file]));
+  const fileMap = new Map(parsedFiles.map((file) => [file.path, file] as const));
 
   const analyzedFiles: AnalyzedFile[] = changeContext.changes.map((change) => {
-    const relativePath = normalizeRepoRelative(changeContext.repository.rootUri.fsPath, change.uri);
-    const existing = fileMap.get(relativePath) ?? {
-      path: relativePath,
-      status: statusToLetter(change.status),
-      signals: [],
-      additions: 0,
-      deletions: 0,
-      isBinary: false,
-      functionContexts: []
-    };
+    const rootPath = changeContext.repository.rootUri.fsPath;
+    const relativePath = normalizeRepoRelative(rootPath, change.uri);
+    const status = statusToLetter(change.status);
+    const renameReference = change.renameUri ?? change.originalUri;
+    const previousPath =
+      status === "R" && renameReference ? normalizeRepoRelative(rootPath, renameReference) : undefined;
+    const existing =
+      fileMap.get(relativePath) ??
+      (previousPath ? fileMap.get(previousPath) : undefined) ?? {
+        path: relativePath,
+        previousPath,
+        status,
+        signals: [],
+        additions: 0,
+        deletions: 0,
+        isBinary: false,
+        functionContexts: [],
+        addedLines: [],
+        removedLines: []
+      };
 
     const pathSignal = classifyByPath(relativePath);
     const signals = [...existing.signals];
@@ -91,23 +120,40 @@ async function generateCommitMessage(): Promise<void> {
 
     return {
       ...existing,
-      status: statusToLetter(change.status),
+      path: relativePath,
+      previousPath: existing.previousPath ?? previousPath,
+      status,
       signals
     };
   });
 
-  const result = mergeSignals(analyzedFiles, analyzeMetadata(changeContext.changes));
+  const metadata = analyzeMetadata(changeContext.changes, analyzedFiles);
+  const result = mergeSignals(analyzedFiles, metadata);
   changeContext.repository.inputBox.value = result.message;
+
+  // Large commit suggestion: >20 files with mixed types
+  if (analyzedFiles.length > 20 && config.showConfidence) {
+    vscode.window.showWarningMessage(
+      `Large commit (${analyzedFiles.length} files) detected. Consider splitting into smaller, focused commits.`
+    );
+  }
 
   if (config.showConfidence) {
     const percent = Math.round(result.confidence * 100);
-    if (changeContext.source === "workingTree") {
-      vscode.window.showInformationMessage(
-        `Generated from unstaged changes: ${result.message} (${percent}% confidence)`
-      );
+    const sourceLabel = changeContext.source === "workingTree" ? " (unstaged)" : "";
+    // Confidence threshold UX (PDF spec):
+    // ≥80%: silent auto-fill, 50–79%: info note, <50%: warning
+    if (result.confidence >= 0.8) {
+      // High confidence — no notification needed, message is already set
       return;
     }
-    vscode.window.showInformationMessage(`Generated ${result.message} (${percent}% confidence)`);
+    if (result.confidence >= 0.5) {
+      vscode.window.showInformationMessage(`Generated${sourceLabel}: ${result.message} (${percent}% confidence)`);
+    } else {
+      vscode.window.showWarningMessage(
+        `Low confidence (${percent}%) — generated: ${result.message}. Please review before committing.`
+      );
+    }
   }
 }
 

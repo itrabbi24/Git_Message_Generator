@@ -15,13 +15,24 @@ The goal is to produce a solid first commit message automatically, while still k
 
 ## Features
 
-- Generates commit messages from staged changes
-- Supports conventional commit types such as `feat`, `fix`, `docs`, `refactor`, `perf`, `test`, `build`, `ci`, and `chore`
-- Reads staged changes through the built-in VS Code Git extension API
-- Detects likely scope values from folder structure
-- Adds a Source Control action button for one-click generation
-- Works with Git repositories, including repositories hosted on GitHub
-- Provides configurable scope mapping, type overrides, header length, and confidence display
+- Generates commit messages from staged changes; falls back to unstaged working-tree changes automatically
+- Detects **11 commit types**: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`
+- `build(deps)` scope auto-detected when only dependency/lock files changed
+- **Merge & revert skip**: preserves git-generated messages for merge and revert commits
+- Rename-aware descriptions using diff similarity scores (≥95% → "rename X to Y")
+- Large commit (>20 files) warning with split suggestion
+- Three-tier confidence UX: ≥80% silent, 50–79% info, <50% warning
+- One-click button in the Source Control panel + `Ctrl+Shift+G` keyboard shortcut
+
+## Detection Coverage
+
+The analyzer scores every major change possibility across three layers:
+
+**Layer 1 — File path:** `feat` (src files), `fix`, `docs` (README/CHANGELOG/wiki), `style` (CSS/SCSS/tailwind), `refactor` (renames), `perf`, `test` (`__tests__/`, `__mocks__/`, `__fixtures__/`), `build` (Dockerfile, webpack, `kubernetes/`, `helm/`, `terraform/`), `build(deps)` (package.json, yarn.lock, go.mod), `ci` (.github/workflows, .circleci), `chore` (.gitignore, tsconfig, .env)
+
+**Layer 2 — Diff content:** optional chaining/null checks → `fix`; new exports/components/routes → `feat`; useMemo/memoize/debounce → `perf`; balanced add/delete ratio → `refactor`; whitespace-only → `style`; comment-only → `docs`; 3:1 additions ratio → `feat`; version bump in package.json → `chore`; dependency entries changed → `build`
+
+**Layer 3 — Git metadata:** all files added → `feat`; all deleted → `chore`; rename detected → `refactor`; deps-only → `build(deps)`; homogeneous file sets get high-confidence type override
 
 ## Example Output
 
@@ -233,12 +244,14 @@ See:
 - Binary files are classified mostly by path and metadata
 - The generated message should still be reviewed before committing
 
-## Roadmap
+## What's New in v0.0.3
 
-- Better description generation from hunk context
-- Support for richer dependency-change detection
-- Improved handling for large mixed commits
-- Expanded tests and packaging metadata
+- **Fixed**: "No staged changes found" bug — git state is now refreshed before reading changes
+- `revert` commit type + merge/revert commit auto-skip
+- Rename similarity-aware descriptions and status-aware verbs (add/update/remove/rename)
+- Kubernetes, Helm, Terraform, `__mocks__/`, `__fixtures__/` file patterns
+- `build(deps)` scope for dependency-only commits
+- Three-tier confidence UX and large-commit split warnings
 
 ## License
 

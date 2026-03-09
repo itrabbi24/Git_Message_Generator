@@ -14,6 +14,8 @@ export interface Repository {
   state: RepositoryState;
   inputBox: { value: string };
   diff(cached?: boolean): Promise<string>;
+  /** Refreshes the repository state (indexChanges, workingTreeChanges). */
+  status(): Promise<void>;
 }
 
 export interface RepositoryState {

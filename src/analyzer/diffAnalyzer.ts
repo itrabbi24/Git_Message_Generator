@@ -1,6 +1,18 @@
 import parseDiff from "parse-diff";
 import { AnalyzedFile, Signal } from "../types";
-import { BINARY_EXTENSIONS, FEAT_PATTERNS, FIX_PATTERNS, PERF_PATTERNS } from "../utils/patterns";
+import {
+  FEAT_PATTERNS,
+  FIX_PATTERNS,
+  PERF_PATTERNS,
+  REFACTOR_PATTERNS,
+  SECURITY_PATTERNS,
+  TEST_PATTERNS,
+  isBinaryFile,
+  isDependencyFile,
+  isLockFile,
+  isMigrationFile,
+  isSourceCodeFile
+} from "../utils/patterns";
 
 type DiffFile = ReturnType<typeof parseDiff>[number];
 
@@ -13,59 +25,161 @@ function toSignals(lines: string[], patterns: RegExp[], type: Signal["type"], we
   return matched.map(() => ({ type, source: "diff_content", weight, reason }));
 }
 
-function isWhitespaceOnly(lines: string[]): boolean {
-  return lines.every((line) => {
-    if (!/^[+-]/.test(line)) {
-      return true;
-    }
-    const normalized = line
-      .slice(1)
-      .replace(/[\s;,'"`]+/g, "")
-      .trim();
-    return normalized.length === 0;
-  });
-}
-
 function extractContexts(file: DiffFile): string[] {
   return (file.chunks ?? [])
     .map((chunk) => chunk.content.match(/@@ .+ @@\s*(.+)/)?.[1]?.trim())
     .filter((value): value is string => Boolean(value));
 }
 
-function countLineKinds(lines: string[]): { additions: number; deletions: number } {
-  let additions = 0;
-  let deletions = 0;
-  for (const line of lines) {
-    if (line.startsWith("+")) {
-      additions += 1;
-    } else if (line.startsWith("-")) {
-      deletions += 1;
-    }
+function normalizeDiffPath(value?: string): string {
+  if (!value) {
+    return "";
   }
-  return { additions, deletions };
+  return normalizePath(value).replace(/^a\//, "").replace(/^b\//, "").replace(/^\/dev\/null$/, "");
 }
 
-function isBinaryPath(path: string): boolean {
-  const lower = path.toLowerCase();
-  const dot = lower.lastIndexOf(".");
-  return dot >= 0 && BINARY_EXTENSIONS.has(lower.slice(dot));
+function resolveFileIdentity(file: DiffFile): { path: string; previousPath?: string; status: AnalyzedFile["status"] } {
+  const fromPath = normalizeDiffPath(file.from);
+  const toPath = normalizeDiffPath(file.to);
+
+  if (!fromPath && toPath) {
+    return { path: toPath, status: "A" };
+  }
+  if (!toPath && fromPath) {
+    return { path: fromPath, status: "D" };
+  }
+  if (fromPath && toPath && fromPath !== toPath) {
+    return { path: toPath, previousPath: fromPath, status: "R" };
+  }
+  return { path: toPath || fromPath || "unknown", status: "M" };
+}
+
+function extractAddedRemovedLines(file: DiffFile): { addedLines: string[]; removedLines: string[] } {
+  const addedLines: string[] = [];
+  const removedLines: string[] = [];
+
+  for (const chunk of file.chunks ?? []) {
+    for (const change of chunk.changes ?? []) {
+      const content = change.content ?? "";
+      if (content.startsWith("+")) {
+        addedLines.push(content.slice(1));
+      } else if (content.startsWith("-")) {
+        removedLines.push(content.slice(1));
+      }
+    }
+  }
+
+  return { addedLines, removedLines };
+}
+
+function normalizeForStyle(value: string): string {
+  return value.replace(/[\s;,'"`]+/g, "").trim();
+}
+
+function isFormatOnly(addedLines: string[], removedLines: string[]): boolean {
+  if (addedLines.length + removedLines.length === 0) {
+    return false;
+  }
+
+  const normalizedAdded = addedLines.map(normalizeForStyle).filter(Boolean).sort();
+  const normalizedRemoved = removedLines.map(normalizeForStyle).filter(Boolean).sort();
+
+  if (normalizedAdded.length === 0 && normalizedRemoved.length === 0) {
+    return true;
+  }
+  if (normalizedAdded.length !== normalizedRemoved.length) {
+    return false;
+  }
+  return normalizedAdded.every((value, index) => value === normalizedRemoved[index]);
+}
+
+function isCommentLine(value: string): boolean {
+  const trimmed = value.trim();
+  return (
+    trimmed.startsWith("//") ||
+    trimmed.startsWith("/*") ||
+    trimmed.startsWith("*") ||
+    trimmed.startsWith("#") ||
+    trimmed.startsWith("--")
+  );
+}
+
+function isCommentOnlyChange(addedLines: string[], removedLines: string[]): boolean {
+  const lines = [...addedLines, ...removedLines].map((line) => line.trim()).filter(Boolean);
+  return lines.length > 0 && lines.every((line) => isCommentLine(line));
+}
+
+const DEPENDENCY_SECTION_PATTERN = /"(dependencies|devDependencies|peerDependencies|optionalDependencies|resolutions)"/;
+const DEPENDENCY_ENTRY_PATTERN = /^\s*"(@?[\w./-]+)"\s*:\s*"/;
+const VERSION_FIELD_PATTERN = /"version"\s*:\s*"/;
+const SCRIPT_FIELD_PATTERN = /"scripts"\s*:/;
+
+function dependencySignals(path: string, addedLines: string[], removedLines: string[]): Signal[] {
+  if (!isDependencyFile(path)) {
+    return [];
+  }
+
+  const lines = [...addedLines, ...removedLines];
+  const hasDependencySection = lines.some((line) => DEPENDENCY_SECTION_PATTERN.test(line));
+  const hasDependencyEntries = lines.some((line) => DEPENDENCY_ENTRY_PATTERN.test(line));
+  const hasVersionOnly = lines.some((line) => VERSION_FIELD_PATTERN.test(line));
+  const hasScripts = lines.some((line) => SCRIPT_FIELD_PATTERN.test(line));
+
+  if (isLockFile(path) || hasDependencySection || hasDependencyEntries) {
+    return [{ type: "build", source: "diff_content", weight: 0.88, reason: "dependencies changed" }];
+  }
+  if (hasScripts) {
+    return [{ type: "build", source: "diff_content", weight: 0.74, reason: "build scripts changed" }];
+  }
+  if (hasVersionOnly) {
+    return [{ type: "chore", source: "diff_content", weight: 0.82, reason: "version bump detected" }];
+  }
+  return [{ type: "build", source: "diff_content", weight: 0.64, reason: "dependency manifest updated" }];
+}
+
+/**
+ * Extract rename similarity percentages from raw unified diff.
+ * Returns a map of normalizedToPath → similarityPercent (0-100).
+ */
+function parseSimilarities(rawDiff: string): Map<string, number> {
+  const map = new Map<string, number>();
+  const regex = /similarity index (\d+)%[\r\n]+rename from (.+)[\r\n]+rename to (.+)/g;
+  let match: RegExpExecArray | null;
+  while ((match = regex.exec(rawDiff)) !== null) {
+    const similarity = parseInt(match[1], 10);
+    const toPath = match[3].trim().replace(/^b\//, "").replace(/^a\//, "");
+    map.set(normalizePath(toPath), similarity);
+  }
+  return map;
 }
 
 export function parseFiles(rawDiff: string): AnalyzedFile[] {
+  if (!rawDiff || rawDiff.trim().length === 0) {
+    return [];
+  }
   const parsed = parseDiff(rawDiff);
+  const similarities = parseSimilarities(rawDiff);
   return parsed.map((file) => {
-    const normalizedPath = normalizePath(file.to ?? file.from ?? "unknown");
-    const lines = (file.chunks ?? []).flatMap((chunk) => (chunk.changes ?? []).map((change) => change.content));
-    const { additions, deletions } = countLineKinds(lines);
+    const identity = resolveFileIdentity(file);
+    const { addedLines, removedLines } = extractAddedRemovedLines(file);
+    const additions = addedLines.length;
+    const deletions = removedLines.length;
+    const addedPrefixed = addedLines.map((line) => `+${line}`);
+    const removedPrefixed = removedLines.map((line) => `-${line}`);
+    const allPrefixedLines = addedPrefixed.concat(removedPrefixed);
     const signals: Signal[] = [];
 
-    signals.push(...toSignals(lines, FIX_PATTERNS, "fix", 0.3, "fix pattern matched"));
-    signals.push(...toSignals(lines, FEAT_PATTERNS, "feat", 0.25, "feature pattern matched"));
-    signals.push(...toSignals(lines, PERF_PATTERNS, "perf", 0.35, "performance pattern matched"));
+    signals.push(...toSignals(addedPrefixed, FIX_PATTERNS, "fix", 0.3, "fix pattern matched"));
+    signals.push(...toSignals(addedPrefixed, FEAT_PATTERNS, "feat", 0.25, "feature pattern matched"));
+    signals.push(...toSignals(addedPrefixed, PERF_PATTERNS, "perf", 0.35, "performance pattern matched"));
+    signals.push(...toSignals(allPrefixedLines, REFACTOR_PATTERNS, "refactor", 0.35, "refactor pattern matched"));
+    signals.push(...toSignals(addedPrefixed, TEST_PATTERNS, "test", 0.45, "test pattern matched"));
+    signals.push(...toSignals(addedPrefixed, SECURITY_PATTERNS, "fix", 0.45, "security hardening pattern matched"));
+    signals.push(...dependencySignals(identity.path, addedLines, removedLines));
 
     const delta = Math.abs(additions - deletions);
     const total = Math.max(additions, deletions, 1);
-    const hasNewExport = lines.some((line) => /^\+\s*(export\s+)?(async\s+)?(function|class|const)\s+/.test(line));
+    const hasNewExport = addedLines.some((line) => /^\s*(export\s+)?(async\s+)?(function|class|const)\s+/.test(line));
     if (delta / total <= 0.2 && !hasNewExport && additions > 0 && deletions > 0) {
       signals.push({
         type: "refactor",
@@ -75,7 +189,45 @@ export function parseFiles(rawDiff: string): AnalyzedFile[] {
       });
     }
 
-    if (lines.length > 0 && isWhitespaceOnly(lines)) {
+    // Additions >> deletions (3:1 ratio) on source files → feat 0.40
+    if (additions >= deletions * 3 + 3 && !hasNewExport) {
+      signals.push({
+        type: "feat",
+        source: "diff_content",
+        weight: 0.4,
+        reason: "additions far exceed deletions (3:1 ratio)"
+      });
+    }
+
+    // Mostly deletions (3:1 reverse) → chore 0.35 (cleanup/removal)
+    if (deletions >= additions * 3 + 3 && !hasNewExport && deletions > 0) {
+      signals.push({
+        type: "chore",
+        source: "diff_content",
+        weight: 0.35,
+        reason: "mostly removing code"
+      });
+    }
+
+    if (isMigrationFile(identity.path)) {
+      signals.push({
+        type: "feat",
+        source: "diff_content",
+        weight: 0.6,
+        reason: "migration content changed"
+      });
+    }
+
+    if (isCommentOnlyChange(addedLines, removedLines)) {
+      signals.push({
+        type: "docs",
+        source: "diff_content",
+        weight: 0.58,
+        reason: "comment-only diff detected"
+      });
+    }
+
+    if (isFormatOnly(addedLines, removedLines)) {
       signals.push({
         type: "style",
         source: "diff_content",
@@ -84,14 +236,38 @@ export function parseFiles(rawDiff: string): AnalyzedFile[] {
       });
     }
 
+    if (identity.status === "R") {
+      signals.push({
+        type: "refactor",
+        source: "diff_content",
+        weight: 0.7,
+        reason: "rename detected in diff"
+      });
+    }
+
+    if (identity.status === "A" && isSourceCodeFile(identity.path)) {
+      signals.push({
+        type: "feat",
+        source: "diff_content",
+        weight: 0.45,
+        reason: "new source file added"
+      });
+    }
+
+    const renameSimilarity = similarities.get(identity.path);
+
     return {
-      path: normalizedPath.replace(/^b\//, "").replace(/^a\//, ""),
-      status: "M",
+      path: identity.path,
+      previousPath: identity.previousPath,
+      status: identity.status,
       signals,
       additions,
       deletions,
-      isBinary: isBinaryPath(normalizedPath) || rawDiff.includes("Binary files"),
-      functionContexts: extractContexts(file)
+      isBinary: isBinaryFile(identity.path) || ((file.chunks ?? []).length === 0 && addedLines.length + removedLines.length === 0),
+      functionContexts: extractContexts(file),
+      addedLines,
+      removedLines,
+      renameSimilarity
     };
   });
 }

@@ -8,7 +8,8 @@ export type CommitType =
   | "test"
   | "build"
   | "ci"
-  | "chore";
+  | "chore"
+  | "revert";
 
 export interface Signal {
   type: CommitType;
@@ -17,14 +18,25 @@ export interface Signal {
   reason: string;
 }
 
+export type FileStatus = "A" | "M" | "D" | "R" | "C";
+
 export interface AnalyzedFile {
   path: string;
-  status: string;
+  previousPath?: string;
+  status: FileStatus;
   signals: Signal[];
   additions: number;
   deletions: number;
   isBinary: boolean;
   functionContexts: string[];
+  addedLines: string[];
+  removedLines: string[];
+  renameSimilarity?: number;
+}
+
+export interface MetadataResult {
+  signals: Signal[];
+  isDepsOnly: boolean;
 }
 
 export interface GenerationResult {
