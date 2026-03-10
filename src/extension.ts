@@ -122,6 +122,67 @@ function explainLastGeneration(): void {
   channel.show(true);
 }
 
+async function applyPreset(): Promise<void> {
+  const selection = await vscode.window.showQuickPick(
+    [
+      {
+        label: "Balanced (Recommended)",
+        description: "General purpose setup for mixed repositories",
+        value: "balanced"
+      },
+      {
+        label: "Frontend",
+        description: "Bias toward UI/style/feature wording",
+        value: "frontend"
+      },
+      {
+        label: "Backend",
+        description: "Bias toward API/fix/refactor/perf wording",
+        value: "backend"
+      },
+      {
+        label: "Infra",
+        description: "Bias toward CI/build/chore changes",
+        value: "infra"
+      }
+    ],
+    { placeHolder: "Choose CommitGen preset profile" }
+  );
+
+  if (!selection) {
+    return;
+  }
+
+  const config = vscode.workspace.getConfiguration("commitGen");
+  const target = vscode.workspace.workspaceFolders?.length ? vscode.ConfigurationTarget.Workspace : vscode.ConfigurationTarget.Global;
+
+  const preset = selection.value;
+  await config.update("profile", preset, target);
+  await config.update("autoDetectProfile", false, target);
+
+  if (preset === "frontend") {
+    await config.update("messageStyle", "verbose", target);
+    await config.update("includeBody", true, target);
+    await config.update("bodyMaxLines", 12, target);
+  } else if (preset === "backend") {
+    await config.update("messageStyle", "balanced", target);
+    await config.update("includeBody", true, target);
+    await config.update("bodyMaxLines", 10, target);
+  } else if (preset === "infra") {
+    await config.update("messageStyle", "concise", target);
+    await config.update("includeBody", true, target);
+    await config.update("bodyMaxLines", 8, target);
+  } else {
+    await config.update("profile", "balanced", target);
+    await config.update("autoDetectProfile", true, target);
+    await config.update("messageStyle", "balanced", target);
+    await config.update("includeBody", true, target);
+    await config.update("bodyMaxLines", 10, target);
+  }
+
+  vscode.window.showInformationMessage(`CommitGen preset applied: ${selection.label}`);
+}
+
 export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     vscode.commands.registerCommand("commitGen.generate", async () => {
@@ -136,6 +197,11 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     vscode.commands.registerCommand("commitGen.explainLast", () => {
       explainLastGeneration();
+    })
+  );
+  context.subscriptions.push(
+    vscode.commands.registerCommand("commitGen.applyPreset", async () => {
+      await applyPreset();
     })
   );
 }

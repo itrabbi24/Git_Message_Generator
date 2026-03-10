@@ -5,6 +5,14 @@ All notable changes to this project are documented in this file.
 ## [Unreleased]
 
 ### Added
+- TBD
+
+### Changed
+- TBD
+
+## [0.2.0] - 2026-03-10
+
+### Added
 - Automated unit tests for diff parsing, scoring, scope detection, and message composition.
 - GitHub Actions CI workflow for lint, typecheck, build, test, and package validation.
 - New performance settings:
@@ -23,8 +31,9 @@ All notable changes to this project are documented in this file.
   - `test/fixtures/golden-messages.json`
 - Explain command:
   - `commitGen.explainLast`
-- Benchmark script:
+- Benchmark scripts:
   - `npm run benchmark`
+  - `npm run benchmark:ci`
 - Automated tag-based release workflow:
   - `.github/workflows/release.yml`
 - Release planning workflow and script:
@@ -32,6 +41,15 @@ All notable changes to this project are documented in this file.
   - `npm run release:plan`
 - New pure generation layer for integration-style testing:
   - `src/core/generationEngine.ts`
+- Golden fixture refresh script:
+  - `npm run golden:refresh`
+  - `scripts/generateGolden.ts`
+- Preset command:
+  - `commitGen.applyPreset`
+- Integration-style generation test:
+  - `test/generationEngine.integration.test.ts`
+- Profile detection tests:
+  - `test/profileWeights.test.ts`
 
 ### Changed
 - Analysis orchestration moved into `src/analyzer/analysisPipeline.ts` for cleaner layering.
@@ -40,7 +58,7 @@ All notable changes to this project are documented in this file.
 - Diff parsing now caps stored per-file lines and contexts while preserving true addition/deletion totals.
 - Scope conflict handling now uses weighted path inference and avoids ambiguous comma scopes.
 - Low-similarity renames now use explicit remove/add wording.
-- Commit body generation now deduplicates contexts and caps verbose output.
+- Commit body generation now deduplicates contexts, supports style profiles, and can group larger changes by module.
 - Configuration parsing now sanitizes invalid mapping and type override entries.
 - Confidence-gated wording now reduces over-specific text for medium/low confidence cases.
 - Score combination now clamps invalid weights and rounds to fixed precision for deterministic behavior.
@@ -49,6 +67,7 @@ All notable changes to this project are documented in this file.
 - Added auto profile detection (`commitGen.autoDetectProfile`) when profile is balanced.
 - Added message style profiles (`concise`, `balanced`, `verbose`).
 - Expanded golden fixture coverage with additional realistic scenarios.
+- Release workflow now enforces benchmark quality gate.
 
 ### Removed
 - Tracked `.vsix` release artifacts from repository.

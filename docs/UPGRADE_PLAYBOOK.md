@@ -33,6 +33,7 @@ Rule: keep these types stable first, then update producer/consumer modules.
 - Applies confidence notification logic.
 - Emits optional local telemetry (`commitGen.debugTelemetry`) to `CommitGen` Output channel.
 - Exposes explain command: `commitGen.explainLast`.
+- Exposes preset command: `commitGen.applyPreset`.
 
 ### `src/core/generationEngine.ts`
 - Pure generation layer for integration tests.
@@ -114,6 +115,7 @@ Configured in `package.json` and parsed in `configuration.ts`:
 - `commitGen.maxRawDiffChars`
 - `commitGen.bodyMaxLines`
 - `commitGen.bodyMaxContextsPerFile`
+- `commitGen.groupBodyByModule`
 - `commitGen.scopeMapping`
 - `commitGen.typeOverrides`
 - `commitGen.profile`
@@ -159,6 +161,7 @@ Current tests:
 - `test/scopeCore.test.ts`
 - `test/goldenMessages.test.ts`
 - `test/fixtures/golden-messages.json`
+- `test/fixtures/golden-generated.json` (script-generated candidates)
 
 What each protects:
 - scorer math and tie behavior
@@ -188,6 +191,7 @@ Before commit:
 5. `npm run package:check`
 6. `npm run benchmark` (for performance-sensitive changes)
 7. `npm run release:plan` (before version bump/release PR)
+8. `npm run golden:refresh` (to regenerate candidate golden cases from git history)
 
 Before release:
 1. Update `CHANGELOG.md`.

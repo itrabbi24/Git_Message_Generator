@@ -2,7 +2,7 @@
   "name": "git-message-generator-by-arg-rabbi",
   "displayName": "Git Message Generator By ARG RABBI",
   "description": "Generate conventional commit messages for Git and GitHub repositories from staged changes in VS Code.",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "publisher": "argrabbi",
   "icon": "assets/logo.png",
   "homepage": "https://github.com/itrabbi24/Git_Message_Generator",
@@ -44,6 +44,10 @@
       {
         "command": "commitGen.explainLast",
         "title": "Explain Last Generated Git Message"
+      },
+      {
+        "command": "commitGen.applyPreset",
+        "title": "Apply CommitGen Preset"
       }
     ],
     "menus": {
@@ -61,6 +65,10 @@
         },
         {
           "command": "commitGen.explainLast",
+          "when": "workspaceFolderCount > 0"
+        },
+        {
+          "command": "commitGen.applyPreset",
           "when": "workspaceFolderCount > 0"
         }
       ]
@@ -103,6 +111,11 @@
           "default": 2,
           "minimum": 1,
           "description": "Maximum contexts (function/class names) to include per file in commit body."
+        },
+        "commitGen.groupBodyByModule": {
+          "type": "boolean",
+          "default": true,
+          "description": "Group commit body by module for larger multi-file changes."
         },
         "commitGen.scopeMapping": {
           "type": "object",
@@ -169,6 +182,8 @@
     "watch": "tsc -w -p .",
     "test": "tsx --test test/generationEngine.integration.test.ts test/profileWeights.test.ts test/commitScorer.test.ts test/diffAnalyzer.test.ts test/messageComposer.test.ts test/scopeCore.test.ts test/goldenMessages.test.ts",
     "benchmark": "tsx scripts/benchmark.ts",
+    "benchmark:ci": "tsx scripts/benchmark.ts --gate",
+    "golden:refresh": "tsx scripts/generateGolden.ts",
     "release:plan": "tsx scripts/releasePlan.ts",
     "release:plan:apply": "tsx scripts/releasePlan.ts --apply",
     "lint": "eslint . --ext .ts",

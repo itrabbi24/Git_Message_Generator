@@ -28,6 +28,7 @@ export interface CommitGenConfig {
   maxRawDiffChars: number;
   bodyMaxLines: number;
   bodyMaxContextsPerFile: number;
+  groupBodyByModule: boolean;
   debugTelemetry: boolean;
   profile: AnalysisProfile;
   autoDetectProfile: boolean;
@@ -116,6 +117,7 @@ export function getCommitGenConfig(): CommitGenConfig {
     maxRawDiffChars,
     bodyMaxLines,
     bodyMaxContextsPerFile,
+    groupBodyByModule: config.get<boolean>("groupBodyByModule", true),
     debugTelemetry: config.get<boolean>("debugTelemetry", false),
     profile: normalizeProfile(config.get("profile", "balanced")),
     autoDetectProfile: config.get<boolean>("autoDetectProfile", true),

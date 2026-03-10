@@ -4,7 +4,7 @@
 
 **Automatic conventional commit messages inside VS Code.**
 
-[![version](https://img.shields.io/badge/version-v0.1.1-0078D7?style=flat-square)](./CHANGELOG.md)
+[![version](https://img.shields.io/badge/version-v0.2.0-0078D7?style=flat-square)](./CHANGELOG.md)
 [![Marketplace](https://img.shields.io/visual-studio-marketplace/v/argrabbi.git-message-generator-by-arg-rabbi?label=Marketplace&style=flat-square&color=0078D7)](https://marketplace.visualstudio.com/items?itemName=ARGRABBI.git-message-generator-by-arg-rabbi)
 [![downloads](https://img.shields.io/visual-studio-marketplace/d/argrabbi.git-message-generator-by-arg-rabbi?label=downloads&style=flat-square&color=44CC11)](https://marketplace.visualstudio.com/items?itemName=ARGRABBI.git-message-generator-by-arg-rabbi)
 [![rating](https://img.shields.io/visual-studio-marketplace/r/argrabbi.git-message-generator-by-arg-rabbi?label=rating&style=flat-square&color=F0C040)](https://marketplace.visualstudio.com/items?itemName=ARGRABBI.git-message-generator-by-arg-rabbi)
@@ -65,6 +65,7 @@ Or install directly from the [VS Code Marketplace](https://marketplace.visualstu
 
 Optional debug command:
 - `Explain Last Generated Git Message`
+- `Apply CommitGen Preset`
 
 ### Example Outputs
 
@@ -87,6 +88,7 @@ ci: update ci.yml, release.yml
 | `commitGen.includeBody` | `true` | Include message body |
 | `commitGen.bodyMaxLines` | `12` | Max body lines |
 | `commitGen.bodyMaxContextsPerFile` | `2` | Max contexts per file in body |
+| `commitGen.groupBodyByModule` | `true` | Group body lines by module on larger commits |
 | `commitGen.profile` | `balanced` | Scoring profile (`balanced/frontend/backend/infra`) |
 | `commitGen.autoDetectProfile` | `true` | Auto detect profile when balanced |
 | `commitGen.messageStyle` | `balanced` | Message verbosity (`concise/balanced/verbose`) |
@@ -101,6 +103,7 @@ ci: update ci.yml, release.yml
   "commitGen.profile": "balanced",
   "commitGen.autoDetectProfile": true,
   "commitGen.messageStyle": "balanced",
+  "commitGen.groupBodyByModule": true,
   "commitGen.includeBody": true,
   "commitGen.bodyMaxLines": 10,
   "commitGen.maxHeaderLength": 72
@@ -144,6 +147,9 @@ npm run typecheck
 npm run test
 npm run build
 npm run benchmark
+npm run benchmark:ci
+npm run golden:refresh
+npm run release:plan
 npm run package:check
 ```
 
@@ -162,6 +168,7 @@ large  files=40 lines=6400  parseMs=201.88
 ### Release Automation
 
 - CI validation workflow: lint + typecheck + test + build + package check
+- Release benchmark quality gate: `npm run benchmark:ci`
 - Tag release workflow (`v*.*.*`) publishes VSIX artifact
 - Release planning workflow + script:
   - `npm run release:plan`

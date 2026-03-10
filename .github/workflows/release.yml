@@ -31,6 +31,9 @@ jobs:
           npm run test
           npm run build
 
+      - name: Benchmark quality gate
+        run: npm run benchmark:ci
+
       - name: Build VSIX
         run: npm run package:check
 

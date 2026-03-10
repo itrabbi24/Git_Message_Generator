@@ -126,3 +126,18 @@ test("composeBody drops contexts for low confidence", () => {
   const body = composeBody(files, "feat", { confidence: 0.2 });
   assert.equal(body, "- update a.ts");
 });
+
+test("composeBody groups larger changes by module", () => {
+  const files = [
+    createFile({ path: "src/auth/login.ts" }),
+    createFile({ path: "src/auth/register.ts" }),
+    createFile({ path: "src/payments/charge.ts" }),
+    createFile({ path: "src/payments/refund.ts" }),
+    createFile({ path: "src/ui/button.tsx" }),
+    createFile({ path: "src/ui/modal.tsx" })
+  ];
+  const body = composeBody(files, "feat", { groupByModule: true, style: "balanced" });
+  const lines = body.split("\n");
+  assert.ok(lines[0].includes("auth:"));
+  assert.ok(lines.some((line) => line.includes("payments:")));
+});

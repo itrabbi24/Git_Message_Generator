@@ -239,6 +239,22 @@ export interface ComposeBodyOptions {
   maxContextsPerFile?: number;
   confidence?: number;
   style?: MessageStyle;
+  groupByModule?: boolean;
+}
+
+function moduleKey(filePath: string): string {
+  const normalized = filePath.replace(/\\/g, "/");
+  const parts = normalized.split("/").filter(Boolean);
+  if (parts.length === 0) {
+    return "root";
+  }
+  if (parts[0] === "src" && parts[1]) {
+    return parts[1];
+  }
+  if (["packages", "apps", "libs", "modules", "services"].includes(parts[0]) && parts[1]) {
+    return parts[1];
+  }
+  return parts[0];
 }
 
 export function composeBody(files: AnalyzedFile[], commitType: CommitType, options: ComposeBodyOptions = {}): string {
@@ -248,8 +264,31 @@ export function composeBody(files: AnalyzedFile[], commitType: CommitType, optio
   const maxLines = Math.max(3, options.maxLines ?? styleMaxLines);
   const confidence = options.confidence ?? 1;
   const maxContextsPerFile = confidence < 0.5 ? 0 : Math.max(1, options.maxContextsPerFile ?? styleMaxContexts);
+  const groupByModule = options.groupByModule ?? true;
   const lines: string[] = [];
+  let coveredFiles = 0;
 
+  if (groupByModule && files.length >= 6) {
+    const grouped = new Map<string, AnalyzedFile[]>();
+    for (const file of files) {
+      const key = moduleKey(file.path);
+      const bucket = grouped.get(key) ?? [];
+      bucket.push(file);
+      grouped.set(key, bucket);
+    }
+
+    for (const [module, moduleFiles] of [...grouped.entries()].sort((a, b) => b[1].length - a[1].length)) {
+      if (lines.length >= maxLines) {
+        break;
+      }
+      const verb = confidence < 0.5 ? "update" : pickVerb(commitType, moduleFiles.length, moduleFiles);
+      const names = unique(moduleFiles.map((file) => basename(file.path))).slice(0, style === "concise" ? 2 : 4);
+      const remaining = moduleFiles.length - names.length;
+      const suffix = remaining > 0 ? ` +${remaining}` : "";
+      lines.push(`- ${verb} ${module}: ${names.join(", ")}${suffix}`);
+      coveredFiles += moduleFiles.length;
+    }
+  } else {
   for (const file of files) {
     if (lines.length >= maxLines) {
       break;
@@ -267,9 +306,11 @@ export function composeBody(files: AnalyzedFile[], commitType: CommitType, optio
     } else {
       lines.push(`- ${verb} ${name}`);
     }
+    coveredFiles += 1;
+  }
   }
 
-  const omitted = files.length - lines.length;
+  const omitted = Math.max(0, files.length - coveredFiles);
   if (omitted > 0) {
     // Preserve awareness of additional files without flooding commit body.
     lines.push(`- and ${omitted} more file${omitted === 1 ? "" : "s"}`);

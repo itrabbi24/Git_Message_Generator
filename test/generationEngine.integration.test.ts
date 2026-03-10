@@ -10,6 +10,7 @@ const baseConfig = {
   maxRawDiffChars: 400000,
   bodyMaxLines: 12,
   bodyMaxContextsPerFile: 2,
+  groupBodyByModule: true,
   debugTelemetry: false,
   profile: "balanced" as const,
   autoDetectProfile: true,

@@ -68,7 +68,8 @@ export function generateFromAnalysis(
       maxLines: config.bodyMaxLines,
       maxContextsPerFile: config.bodyMaxContextsPerFile,
       confidence: resolved.confidence,
-      style: config.messageStyle
+      style: config.messageStyle,
+      groupByModule: config.groupBodyByModule
     });
   }
 
