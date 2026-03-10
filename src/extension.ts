@@ -1,15 +1,13 @@
-﻿import * as vscode from "vscode";
-import * as path from "path";
-import { classifyByPath, defaultSourceType } from "./analyzer/fileClassifier";
-import { parseFiles } from "./analyzer/diffAnalyzer";
-import { analyzeMetadata } from "./analyzer/metadataAnalyzer";
+﻿import * as path from "path";
+import * as vscode from "vscode";
+import { analyzeChanges } from "./analyzer/analysisPipeline";
+import { defaultSourceType } from "./analyzer/fileClassifier";
 import { detectScope } from "./analyzer/scopeResolver";
 import { getCommitGenConfig } from "./config/configuration";
 import { buildMessage, composeBody, composeDescription } from "./generator/messageComposer";
-import { Status } from "./git/git";
 import { getChangeContext } from "./git/gitService";
 import { combineScores, resolveType } from "./scorer/commitScorer";
-import { AnalyzedFile, FileStatus, GenerationResult, MetadataResult } from "./types";
+import { AnalyzedFile, GenerationResult, MetadataResult } from "./types";
 
 let telemetryChannel: vscode.OutputChannel | undefined;
 
@@ -20,36 +18,7 @@ function getTelemetryChannel(): vscode.OutputChannel {
   return telemetryChannel;
 }
 
-function normalizeRepoRelative(rootPath: string, filePath: vscode.Uri): string {
-  return path.relative(rootPath, filePath.fsPath).replace(/\\/g, "/");
-}
-
-function statusToLetter(status: number): FileStatus {
-  switch (status) {
-    case Status.INDEX_ADDED:
-    case Status.INTENT_TO_ADD:
-    case Status.UNTRACKED:
-    case Status.ADDED_BY_US:
-    case Status.ADDED_BY_THEM:
-    case Status.BOTH_ADDED:
-      return "A";
-    case Status.INDEX_DELETED:
-    case Status.DELETED:
-    case Status.DELETED_BY_US:
-    case Status.DELETED_BY_THEM:
-    case Status.BOTH_DELETED:
-      return "D";
-    case Status.INDEX_RENAMED:
-    case Status.INTENT_TO_RENAME:
-      return "R";
-    case Status.INDEX_COPIED:
-      return "C";
-    default:
-      return "M";
-  }
-}
-
-function mergeSignals(files: AnalyzedFile[], metadata: MetadataResult): GenerationResult {
+function mergeSignals(files: AnalyzedFile[], metadata: MetadataResult, config: ReturnType<typeof getCommitGenConfig>): GenerationResult {
   const allSignals = files.flatMap((file) => file.signals).concat(metadata.signals);
   if (allSignals.length === 0) {
     allSignals.push({
@@ -74,14 +43,14 @@ function mergeSignals(files: AnalyzedFile[], metadata: MetadataResult): Generati
     scope = dot > 0 ? filename.slice(0, dot) : filename;
   }
 
-  const config = getCommitGenConfig();
-  const description = composeDescription(files, resolved.type, scope);
+  const description = composeDescription(files, resolved.type, scope, { confidence: resolved.confidence });
 
   let body: string | undefined;
   if (config.includeBody && files.length > 0) {
     body = composeBody(files, resolved.type, {
       maxLines: config.bodyMaxLines,
-      maxContextsPerFile: config.bodyMaxContextsPerFile
+      maxContextsPerFile: config.bodyMaxContextsPerFile,
+      confidence: resolved.confidence
     });
   }
 
@@ -116,75 +85,24 @@ async function generateCommitMessage(): Promise<void> {
     return;
   }
 
-  const parseStart = Date.now();
-  const parsedFiles = parseFiles(changeContext.rawDiff, {
-    maxLinesPerFile: config.maxAnalyzedLinesPerFile,
-    maxContextsPerFile: config.maxContextsPerFile
-  });
-  const parseMs = Date.now() - parseStart;
-  const fileMap = new Map(parsedFiles.map((file) => [file.path, file] as const));
-
-  const analyzedFiles: AnalyzedFile[] = changeContext.changes.map((change) => {
-    const rootPath = changeContext.repository.rootUri.fsPath;
-    const relativePath = normalizeRepoRelative(rootPath, change.uri);
-    const status = statusToLetter(change.status);
-    const renameReference = change.renameUri ?? change.originalUri;
-    const previousPath =
-      status === "R" && renameReference ? normalizeRepoRelative(rootPath, renameReference) : undefined;
-    const existing =
-      fileMap.get(relativePath) ??
-      (previousPath
-        ? fileMap.get(previousPath)
-        : undefined) ?? {
-        path: relativePath,
-        previousPath,
-        status,
-        signals: [],
-        additions: 0,
-        deletions: 0,
-        isBinary: false,
-        functionContexts: [],
-        addedLines: [],
-        removedLines: []
-      };
-
-    // Reconcile Git API change list with parsed diff, with safe defaults if parser lacks entry.
-    const pathSignal = classifyByPath(relativePath);
-    const signals = [...existing.signals];
-    if (pathSignal) {
-      signals.push(pathSignal);
-    }
-
-    return {
-      ...existing,
-      path: relativePath,
-      previousPath: existing.previousPath ?? previousPath,
-      status,
-      signals
-    };
+  const pipeline = analyzeChanges({
+    rootPath: changeContext.repository.rootUri.fsPath,
+    changes: changeContext.changes,
+    rawDiff: changeContext.rawDiff,
+    config
   });
 
-  const metadata = analyzeMetadata(changeContext.changes, analyzedFiles);
-  const result = mergeSignals(analyzedFiles, metadata);
+  const result = mergeSignals(pipeline.files, pipeline.metadata, config);
   changeContext.repository.inputBox.value = result.message;
 
   if (config.debugTelemetry) {
-    const trackedDiffLines = analyzedFiles.reduce(
-      (sum, file) => sum + file.addedLines.length + file.removedLines.length,
-      0
-    );
-    const totalDiffLines = analyzedFiles.reduce((sum, file) => sum + file.additions + file.deletions, 0);
-    const truncatedFiles = analyzedFiles.filter(
-      (file) => file.additions + file.deletions > file.addedLines.length + file.removedLines.length
-    ).length;
-
     // Output channel telemetry stays local and helps tune caps for large repositories.
     const channel = getTelemetryChannel();
     channel.appendLine(
-      `[CommitGen] source=${changeContext.source} files=${analyzedFiles.length} parseMs=${parseMs} totalMs=${Date.now() - telemetryStart}`
+      `[CommitGen] source=${changeContext.source} files=${pipeline.files.length} parseMs=${pipeline.parseMs} totalMs=${Date.now() - telemetryStart}`
     );
     channel.appendLine(
-      `[CommitGen] trackedLines=${trackedDiffLines} totalLines=${totalDiffLines} truncatedFiles=${truncatedFiles} confidence=${Math.round(
+      `[CommitGen] trackedLines=${pipeline.trackedDiffLines} totalLines=${pipeline.totalDiffLines} truncatedFiles=${pipeline.truncatedFiles} usedDiffFallback=${pipeline.usedDiffFallback} confidence=${Math.round(
         result.confidence * 100
       )}% type=${result.type} scope=${result.scope ?? "none"}`
     );

@@ -19,6 +19,7 @@ This extension analyzes your Git diff and generates a Conventional Commits messa
 Highlights:
 - Fully local: no network calls, no API keys.
 - Multi-signal scoring from path, diff content, and metadata.
+- Confidence-gated wording (high=precise, medium=neutral, low=conservative).
 - Supports `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`.
 - Optional multi-line commit body with per-file context.
 - Upgrade reference for maintainers: [`docs/UPGRADE_PLAYBOOK.md`](./docs/UPGRADE_PLAYBOOK.md)
@@ -39,6 +40,7 @@ Highlights:
 | `commitGen.maxHeaderLength` | number | `72` | Maximum commit header length |
 | `commitGen.maxAnalyzedLinesPerFile` | number | `1200` | Per-file diff line cap kept in memory for analysis |
 | `commitGen.maxContextsPerFile` | number | `12` | Max extracted contexts (function/class names) per file |
+| `commitGen.maxRawDiffChars` | number | `400000` | Maximum raw diff size before fallback to path+metadata-only analysis |
 | `commitGen.bodyMaxLines` | number | `12` | Max lines in generated commit body |
 | `commitGen.bodyMaxContextsPerFile` | number | `2` | Max contexts listed for each file in body |
 | `commitGen.scopeMapping` | object | `{}` | Path prefix to scope mapping |
@@ -58,6 +60,7 @@ Example:
   "commitGen.typeOverrides": {
     "scripts/deploy/": "ci"
   },
+  "commitGen.maxRawDiffChars": 400000,
   "commitGen.bodyMaxLines": 10,
   "commitGen.debugTelemetry": true
 }
@@ -74,9 +77,15 @@ Each signal contributes a weight from `0` to `1`, then scores are combined proba
 - Combined score formula: `1 - (1 - current) * (1 - weight)`
 - Tie-breaks use commit type priority from `src/utils/patterns.ts`.
 
+Message quality by confidence:
+- `>= 0.75`: specific wording with context/function names
+- `0.50 - 0.74`: neutral but still targeted wording
+- `< 0.50`: conservative summaries to avoid over-claiming
+
 ## Known Edge Cases
 
 - Large mixed commits may still produce generic summaries.
+- Very large diffs use a performance fallback (path + metadata signals only).
 - Binary-only changes rely on path/metadata, not content.
 - Low-confidence outputs should be reviewed before commit.
 - Rename similarity below 50% is treated as "remove old and add new".
@@ -100,6 +109,7 @@ npm run lint
 npm run typecheck
 npm run test
 npm run build
+npm run package:check
 ```
 
 Run extension locally:

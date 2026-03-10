@@ -70,6 +70,17 @@ test("composeDescription summarizes many files", () => {
   assert.equal(description, "implement multiple modules");
 });
 
+test("composeDescription is conservative on low confidence", () => {
+  const files = [
+    createFile({ path: "src/auth/login.ts" }),
+    createFile({ path: "src/payments/charge.ts" }),
+    createFile({ path: "src/orders/create.ts" }),
+    createFile({ path: "src/profile/view.ts" })
+  ];
+  const description = composeDescription(files, "feat", null, { confidence: 0.3 });
+  assert.equal(description, "update core modules");
+});
+
 test("composeDescription falls back to core modules for multi-scope commits", () => {
   const files = [
     createFile({ path: "src/auth/login.ts" }),
@@ -97,4 +108,10 @@ test("composeBody compacts contexts and caps line count", () => {
   assert.equal(lines.length, 4);
   assert.equal(lines[0], "- add a.ts: saveUser, validateUser");
   assert.equal(lines[3], "- and 1 more file");
+});
+
+test("composeBody drops contexts for low confidence", () => {
+  const files = [createFile({ path: "src/a.ts", functionContexts: ["saveUser"] })];
+  const body = composeBody(files, "feat", { confidence: 0.2 });
+  assert.equal(body, "- update a.ts");
 });

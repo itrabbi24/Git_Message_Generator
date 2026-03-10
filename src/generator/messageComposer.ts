@@ -111,11 +111,43 @@ function topLevelArea(filePath: string): string {
   return parts.length > 1 ? parts[0] : "root";
 }
 
-export function composeDescription(files: AnalyzedFile[], commitType: CommitType, scope: string | null): string {
+export interface ComposeDescriptionOptions {
+  confidence?: number;
+}
+
+function neutralVerbForStatus(status: FileStatus): string {
+  if (status === "D") {
+    return "remove";
+  }
+  if (status === "R") {
+    return "rename";
+  }
+  return "update";
+}
+
+export function composeDescription(
+  files: AnalyzedFile[],
+  commitType: CommitType,
+  scope: string | null,
+  options: ComposeDescriptionOptions = {}
+): string {
+  const confidence = options.confidence ?? 1;
+  const isLowConfidence = confidence < 0.5;
+  const isMediumConfidence = !isLowConfidence && confidence < 0.75;
   const ranked = [...files].sort((a, b) => significance(b) - significance(a));
 
   if (files.every((file) => isDependencyFile(file.path))) {
     return composeDependencyDescription(files);
+  }
+
+  if (isLowConfidence) {
+    if (scope) {
+      return `update ${scope} files`;
+    }
+    if (files.length > 3) {
+      return "update core modules";
+    }
+    return "update changed files";
   }
 
   if (files.length === 1) {
@@ -136,7 +168,7 @@ export function composeDescription(files: AnalyzedFile[], commitType: CommitType
     }
 
     const context = compactContext(file.functionContexts[0] ?? "");
-    const verb = statusVerb(file.status, commitType, files.length);
+    const verb = isMediumConfidence ? neutralVerbForStatus(file.status) : statusVerb(file.status, commitType, files.length);
 
     // Dynamic scoping: Use filename if no explicit scope but context exists
     if (!scope && context) {
@@ -153,7 +185,9 @@ export function composeDescription(files: AnalyzedFile[], commitType: CommitType
 
   if (files.length <= 3) {
     const sameStatus = ranked.every((file) => file.status === ranked[0].status);
-    const verb = sameStatus
+    const verb = isMediumConfidence
+      ? "update"
+      : sameStatus
       ? (STATUS_VERBS[ranked[0].status] ?? pickVerb(commitType, files.length, files))
       : pickVerb(commitType, files.length, files);
     const names = unique(ranked.map((file) => basename(file.path)));
@@ -186,21 +220,26 @@ export function composeDescription(files: AnalyzedFile[], commitType: CommitType
 export interface ComposeBodyOptions {
   maxLines?: number;
   maxContextsPerFile?: number;
+  confidence?: number;
 }
 
 export function composeBody(files: AnalyzedFile[], commitType: CommitType, options: ComposeBodyOptions = {}): string {
   const maxLines = Math.max(3, options.maxLines ?? 12);
-  const maxContextsPerFile = Math.max(1, options.maxContextsPerFile ?? 2);
+  const confidence = options.confidence ?? 1;
+  const maxContextsPerFile = confidence < 0.5 ? 0 : Math.max(1, options.maxContextsPerFile ?? 2);
   const lines: string[] = [];
 
   for (const file of files) {
     if (lines.length >= maxLines) {
       break;
     }
-    const verb = statusVerb(file.status, commitType, files.length);
+    const verb = confidence < 0.5 ? neutralVerbForStatus(file.status) : statusVerb(file.status, commitType, files.length);
     const name = basename(file.path);
     // Keep body concise: dedupe noisy contexts and keep only top N tokens per file.
-    const contexts = unique(file.functionContexts.map(compactContext).filter(Boolean)).slice(0, maxContextsPerFile);
+    const contexts =
+      maxContextsPerFile > 0
+        ? unique(file.functionContexts.map(compactContext).filter(Boolean)).slice(0, maxContextsPerFile)
+        : [];
 
     if (contexts.length > 0) {
       lines.push(`- ${verb} ${name}: ${contexts.join(", ")}`);

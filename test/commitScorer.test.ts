@@ -23,3 +23,13 @@ test("resolveType uses priority when scores are close", () => {
   assert.equal(resolved.type, "perf");
   assert.equal(resolved.confidence, 0.75);
 });
+
+test("combineScores clamps invalid weights", () => {
+  const signals: Signal[] = [
+    { type: "feat", source: "filepath", weight: 5, reason: "too high" },
+    { type: "feat", source: "metadata", weight: -3, reason: "too low" }
+  ];
+
+  const scores = combineScores(signals);
+  assert.equal(scores.get("feat"), 1);
+});

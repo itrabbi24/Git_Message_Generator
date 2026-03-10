@@ -6,12 +6,13 @@ This is the single source of truth for maintainers. Use this file first for any 
 
 1. Command entrypoint: `src/extension.ts`
 2. Git change collection: `src/git/gitService.ts`
-3. Diff parsing + content signals: `src/analyzer/diffAnalyzer.ts`
-4. Path-based signal: `src/analyzer/fileClassifier.ts`
-5. Metadata-based signal: `src/analyzer/metadataAnalyzer.ts`
-6. Score fusion and winner: `src/scorer/commitScorer.ts`
-7. Scope inference: `src/analyzer/scopeResolver.ts` -> `src/analyzer/scopeCore.ts`
-8. Commit text generation: `src/generator/messageComposer.ts` + `src/generator/verbSelector.ts`
+3. Analysis pipeline assembly: `src/analyzer/analysisPipeline.ts`
+4. Diff parsing + content signals: `src/analyzer/diffAnalyzer.ts`
+5. Path-based signal: `src/analyzer/fileClassifier.ts`
+6. Metadata-based signal: `src/analyzer/metadataAnalyzer.ts`
+7. Score fusion and winner: `src/scorer/commitScorer.ts`
+8. Scope inference: `src/analyzer/scopeResolver.ts` -> `src/analyzer/scopeCore.ts`
+9. Commit text generation: `src/generator/messageComposer.ts` + `src/generator/verbSelector.ts`
 
 ## 2) Data Contracts
 
@@ -26,10 +27,15 @@ Rule: keep these types stable first, then update producer/consumer modules.
 ## 3) Module Responsibilities
 
 ### `src/extension.ts`
-- Orchestrates end-to-end generation.
-- Merges parsed diff with Git API change list.
+- Thin orchestration layer only.
+- Delegates change analysis to `analysisPipeline.ts`.
 - Applies confidence notification logic.
 - Emits optional local telemetry (`commitGen.debugTelemetry`) to `CommitGen` Output channel.
+
+### `src/analyzer/analysisPipeline.ts`
+- Normalizes raw Git changes into `AnalyzedFile[]`.
+- Handles very large diff fallback using `maxRawDiffChars`.
+- Produces parse/truncation metrics for telemetry.
 
 ### `src/config/configuration.ts`
 - Reads VS Code settings.
@@ -94,6 +100,7 @@ Configured in `package.json` and parsed in `configuration.ts`:
 - `commitGen.maxHeaderLength`
 - `commitGen.maxAnalyzedLinesPerFile`
 - `commitGen.maxContextsPerFile`
+- `commitGen.maxRawDiffChars`
 - `commitGen.bodyMaxLines`
 - `commitGen.bodyMaxContextsPerFile`
 - `commitGen.scopeMapping`
@@ -113,6 +120,7 @@ When adding a new setting, always update:
 
 - Better commit type accuracy:
   - `src/utils/patterns.ts`
+  - `src/analyzer/analysisPipeline.ts`
   - `src/analyzer/diffAnalyzer.ts`
   - `src/analyzer/metadataAnalyzer.ts`
 - Better scope:
@@ -133,12 +141,14 @@ Current tests:
 - `test/diffAnalyzer.test.ts`
 - `test/messageComposer.test.ts`
 - `test/scopeCore.test.ts`
+- `test/goldenMessages.test.ts`
 
 What each protects:
 - scorer math and tie behavior
 - parser extraction and line-cap behavior
 - description/body wording rules
 - scope weighting and ambiguity behavior
+- stable human-readable output from fixture-backed golden cases
 
 ## 7) High-Risk Change Areas
 

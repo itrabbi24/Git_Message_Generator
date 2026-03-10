@@ -78,6 +78,12 @@
           "minimum": 1,
           "description": "Maximum number of extracted function/class contexts per file."
         },
+        "commitGen.maxRawDiffChars": {
+          "type": "integer",
+          "default": 400000,
+          "minimum": 50000,
+          "description": "Maximum raw diff size (characters) to parse deeply before fallback to path+metadata analysis."
+        },
         "commitGen.bodyMaxLines": {
           "type": "integer",
           "default": 12,
@@ -127,7 +133,7 @@
     "build": "tsc -p .",
     "typecheck": "tsc -p . --noEmit",
     "watch": "tsc -w -p .",
-    "test": "tsx --test test/commitScorer.test.ts test/diffAnalyzer.test.ts test/messageComposer.test.ts test/scopeCore.test.ts",
+    "test": "tsx --test test/commitScorer.test.ts test/diffAnalyzer.test.ts test/messageComposer.test.ts test/scopeCore.test.ts test/goldenMessages.test.ts",
     "lint": "eslint . --ext .ts",
     "format": "prettier --check .",
     "format:write": "prettier --write .",

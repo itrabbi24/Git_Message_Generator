@@ -10,6 +10,7 @@ All notable changes to this project are documented in this file.
 - New performance settings:
   - `commitGen.maxAnalyzedLinesPerFile`
   - `commitGen.maxContextsPerFile`
+  - `commitGen.maxRawDiffChars`
 - New body controls:
   - `commitGen.bodyMaxLines`
   - `commitGen.bodyMaxContextsPerFile`
@@ -17,8 +18,12 @@ All notable changes to this project are documented in this file.
   - `commitGen.debugTelemetry`
 - New maintainer guide:
   - `docs/UPGRADE_PLAYBOOK.md`
+- Golden output regression harness:
+  - `test/goldenMessages.test.ts`
+  - `test/fixtures/golden-messages.json`
 
 ### Changed
+- Analysis orchestration moved into `src/analyzer/analysisPipeline.ts` for cleaner layering.
 - Scope detection logic extracted into `scopeCore` for better testability.
 - `STATUS_VERBS` deduplicated into a single shared utility.
 - Diff parsing now caps stored per-file lines and contexts while preserving true addition/deletion totals.
@@ -26,6 +31,8 @@ All notable changes to this project are documented in this file.
 - Low-similarity renames now use explicit remove/add wording.
 - Commit body generation now deduplicates contexts and caps verbose output.
 - Configuration parsing now sanitizes invalid mapping and type override entries.
+- Confidence-gated wording now reduces over-specific text for medium/low confidence cases.
+- Score combination now clamps invalid weights and rounds to fixed precision for deterministic behavior.
 
 ### Removed
 - Tracked `.vsix` release artifacts from repository.

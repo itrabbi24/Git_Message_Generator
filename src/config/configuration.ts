@@ -19,6 +19,7 @@ export interface CommitGenConfig {
   maxHeaderLength: number;
   maxAnalyzedLinesPerFile: number;
   maxContextsPerFile: number;
+  maxRawDiffChars: number;
   bodyMaxLines: number;
   bodyMaxContextsPerFile: number;
   debugTelemetry: boolean;
@@ -79,6 +80,7 @@ export function getCommitGenConfig(): CommitGenConfig {
   const config = vscode.workspace.getConfiguration("commitGen");
   const maxAnalyzedLinesPerFile = Math.max(100, config.get<number>("maxAnalyzedLinesPerFile", 1200));
   const maxContextsPerFile = Math.max(1, config.get<number>("maxContextsPerFile", 12));
+  const maxRawDiffChars = Math.max(50_000, config.get<number>("maxRawDiffChars", 400_000));
   const bodyMaxLines = Math.max(3, config.get<number>("bodyMaxLines", 12));
   const bodyMaxContextsPerFile = Math.max(1, config.get<number>("bodyMaxContextsPerFile", 2));
 
@@ -86,6 +88,7 @@ export function getCommitGenConfig(): CommitGenConfig {
     maxHeaderLength: config.get<number>("maxHeaderLength", 72),
     maxAnalyzedLinesPerFile,
     maxContextsPerFile,
+    maxRawDiffChars,
     bodyMaxLines,
     bodyMaxContextsPerFile,
     debugTelemetry: config.get<boolean>("debugTelemetry", false),

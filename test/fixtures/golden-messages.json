@@ -1,0 +1,49 @@
+[
+  {
+    "name": "high_conf_single_fix",
+    "type": "fix",
+    "scope": "auth",
+    "confidence": 0.91,
+    "maxHeaderLength": 72,
+    "files": [
+      {
+        "path": "src/auth/login.ts",
+        "status": "M",
+        "functionContexts": ["handleLogin"],
+        "addedLines": ["if (!token) return;"],
+        "removedLines": []
+      }
+    ],
+    "expectedHeader": "fix(auth): resolve handleLogin"
+  },
+  {
+    "name": "low_conf_multi_scope",
+    "type": "feat",
+    "scope": null,
+    "confidence": 0.31,
+    "maxHeaderLength": 72,
+    "files": [
+      { "path": "src/auth/login.ts", "status": "M" },
+      { "path": "src/payments/charge.ts", "status": "M" },
+      { "path": "src/orders/create.ts", "status": "M" },
+      { "path": "src/profile/view.ts", "status": "M" }
+    ],
+    "expectedHeader": "feat: update core modules"
+  },
+  {
+    "name": "rename_low_similarity",
+    "type": "refactor",
+    "scope": "core",
+    "confidence": 0.86,
+    "maxHeaderLength": 72,
+    "files": [
+      {
+        "path": "src/core/newEngine.ts",
+        "status": "R",
+        "previousPath": "src/core/legacyEngine.ts",
+        "renameSimilarity": 20
+      }
+    ],
+    "expectedHeader": "refactor(core): remove legacyEngine.ts and add newEngine.ts"
+  }
+]
