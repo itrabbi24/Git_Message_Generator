@@ -15,6 +15,9 @@ Stop writing commit messages from scratch. This extension analyzes your staged G
 
 [Install from Marketplace](https://marketplace.visualstudio.com/items?itemName=ARGRABBI.git-message-generator-by-arg-rabbi) · [View on GitHub](https://github.com/itrabbi24/Git_Message_Generator) · [Report an Issue](https://github.com/itrabbi24/Git_Message_Generator/issues)
 
+## Tutorial
+
+<img src="https://raw.githubusercontent.com/itrabbi24/Git_Message_Generator/main/assets/tutorial.gif" alt="Git Message Generator tutorial" width="900" />
 </div>
 
 ---
