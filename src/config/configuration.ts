@@ -7,8 +7,7 @@ export interface CommitGenConfig {
   typeOverrides: Record<string, CommitType>;
   showConfidence: boolean;
   includeWorkingTreeWhenNoStaged: boolean;
-  warnOnLargeCommit: boolean;
-  largeCommitThreshold: number;
+  includeBody: boolean;
 }
 
 export function getCommitGenConfig(): CommitGenConfig {
@@ -19,7 +18,6 @@ export function getCommitGenConfig(): CommitGenConfig {
     typeOverrides: config.get<Record<string, CommitType>>("typeOverrides", {}),
     showConfidence: config.get<boolean>("showConfidence", true),
     includeWorkingTreeWhenNoStaged: config.get<boolean>("includeWorkingTreeWhenNoStaged", true),
-    warnOnLargeCommit: config.get<boolean>("warnOnLargeCommit", true),
-    largeCommitThreshold: config.get<number>("largeCommitThreshold", 20)
+    includeBody: config.get<boolean>("includeBody", true)
   };
 }

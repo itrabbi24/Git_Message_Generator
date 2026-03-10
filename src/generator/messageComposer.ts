@@ -104,7 +104,7 @@ function unique<T>(values: T[]): T[] {
   return [...new Set(values)];
 }
 
-export function composeDescription(files: AnalyzedFile[], commitType: CommitType, scope: string | null, largeCommitThreshold = 20): string {
+export function composeDescription(files: AnalyzedFile[], commitType: CommitType, scope: string | null): string {
   const ranked = [...files].sort((a, b) => significance(b) - significance(a));
 
   if (files.every((file) => isDependencyFile(file.path))) {
@@ -162,17 +162,37 @@ export function composeDescription(files: AnalyzedFile[], commitType: CommitType
     return `remove ${files.length} files`;
   }
 
-  // Large commit: exceeds threshold with no clear scope → very generic
-  if (files.length > largeCommitThreshold) {
+  if (files.length > 20) {
     return `${verb} multiple modules`;
   }
 
-  return `${verb} ${files.length} files`;
+  return `${verb} ${files.length} changed files`;
 }
 
-export function buildMessage(type: CommitType, scope: string | null, description: string, maxLength: number): string {
-  // If no scope was provided, but description is short, we could potentially inject filename as scope here
-  // However, simpler to just use what's passed.
+export function composeBody(files: AnalyzedFile[], commitType: CommitType): string {
+  const lines: string[] = [];
+
+  for (const file of files) {
+    const verb = statusVerb(file.status, commitType, files.length);
+    const name = basename(file.path);
+    const contexts = file.functionContexts.map(compactContext).filter(Boolean);
+
+    if (contexts.length > 0) {
+      lines.push(`- ${verb} ${name}: ${contexts.join(", ")}`);
+    } else {
+      lines.push(`- ${verb} ${name}`);
+    }
+  }
+
+  return lines.join("\n");
+}
+
+export function buildMessage(type: CommitType, scope: string | null, description: string, maxLength: number, body?: string): string {
   const header = scope ? `${type}(${scope}): ${description}` : `${type}: ${description}`;
-  return header.length <= maxLength ? header : header.slice(0, maxLength).trimEnd();
+  const truncatedHeader = header.length <= maxLength ? header : header.slice(0, maxLength).trimEnd();
+
+  if (body) {
+    return `${truncatedHeader}\n\n${body}`;
+  }
+  return truncatedHeader;
 }

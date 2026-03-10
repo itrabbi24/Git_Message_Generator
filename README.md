@@ -4,13 +4,14 @@
 
 **Automatic conventional commit messages — right inside VS Code.**
 
+[![Version](https://img.shields.io/badge/version-v0.1.0-blue?style=flat-square)](./CHANGELOG.md)
 [![VS Code Marketplace](https://img.shields.io/visual-studio-marketplace/v/argrabbi.git-message-generator-by-arg-rabbi?label=Marketplace&color=0078d7&style=flat-square)](https://marketplace.visualstudio.com/items?itemName=ARGRABBI.git-message-generator-by-arg-rabbi)
 [![Downloads](https://img.shields.io/visual-studio-marketplace/d/argrabbi.git-message-generator-by-arg-rabbi?style=flat-square&color=brightgreen)](https://marketplace.visualstudio.com/items?itemName=ARGRABBI.git-message-generator-by-arg-rabbi)
 [![Rating](https://img.shields.io/visual-studio-marketplace/r/argrabbi.git-message-generator-by-arg-rabbi?style=flat-square&color=yellow)](https://marketplace.visualstudio.com/items?itemName=ARGRABBI.git-message-generator-by-arg-rabbi)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](./LICENSE)
 [![GitHub](https://img.shields.io/badge/GitHub-itrabbi24-181717?style=flat-square&logo=github)](https://github.com/itrabbi24/Git_Message_Generator)
 
-Stop writing commit messages from scratch. This extension analyzes your staged Git changes through a three-layer classification engine and instantly places a [Conventional Commits](https://www.conventionalcommits.org/)-formatted message in your Source Control input box.
+Stop writing commit messages from scratch. This extension analyzes your staged Git changes through a **four-layer classification engine** (identifying function/class names, semantic content, and metadata) and instantly places a [Conventional Commits](https://www.conventionalcommits.org/)-formatted message in your Source Control input box.
 
 [Install from Marketplace](https://marketplace.visualstudio.com/items?itemName=ARGRABBI.git-message-generator-by-arg-rabbi) · [View on GitHub](https://github.com/itrabbi24/Git_Message_Generator) · [Report an Issue](https://github.com/itrabbi24/Git_Message_Generator/issues)
 
@@ -48,8 +49,9 @@ Signals are combined using a probabilistic scoring formula. The highest-confiden
 | Capability | Detail |
 |---|---|
 | **Human-Like Accuracy** | Extracts exact function/class names from diffs (e.g., `implement handleLogin`). |
+| **Detailed Message Body** | Generates a multi-line body with a bulleted list of all changes and their contexts. |
 | **Nuanced Intelligence** | Content-aware verbs: `expose` (exports), `guard` (null checks), `modernize` (ES6+ updates), `validate` (logic guards). |
-| **Large Codebase Support** | Performance-throttled analysis (300-line limit per file) prevents UI hangs on massive diffs. |
+| **Unlimited Analysis** | No line or size limits. Analyzes 100% of your changes, even in massive diffs. |
 | **Dynamic Scoping** | Automatically uses filename as scope for single-file changes (e.g., `feat(authService): ...`). |
 | **11 Commit Types** | `feat` `fix` `docs` `style` `refactor` `perf` `test` `build` `ci` `chore` `revert`. |
 | **Rename Similarity** | Aware of file similarity (95%+ = rename, 50%+ = rename & update). |

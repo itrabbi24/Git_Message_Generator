@@ -2,7 +2,7 @@
   "name": "git-message-generator-by-arg-rabbi",
   "displayName": "Git Message Generator By ARG RABBI",
   "description": "Generate conventional commit messages for Git and GitHub repositories from staged changes in VS Code.",
-  "version": "0.0.4",
+  "version": "0.1.0",
   "publisher": "argrabbi",
   "icon": "assets/logo.png",
   "homepage": "https://github.com/itrabbi24/Git_Message_Generator",
@@ -86,16 +86,10 @@
           "default": true,
           "description": "Use unstaged working-tree changes when no staged changes are available."
         },
-        "commitGen.warnOnLargeCommit": {
+        "commitGen.includeBody": {
           "type": "boolean",
           "default": true,
-          "description": "Show a warning when a commit exceeds the large commit threshold. You can dismiss it permanently from the notification."
-        },
-        "commitGen.largeCommitThreshold": {
-          "type": "integer",
-          "default": 20,
-          "minimum": 5,
-          "description": "Number of files that triggers the large commit warning. Increase to suppress warnings on larger commits."
+          "description": "Include a detailed multi-line body listing all changed files and their specific contexts."
         }
       }
     }

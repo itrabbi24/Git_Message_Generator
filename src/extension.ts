@@ -5,7 +5,7 @@ import { parseFiles } from "./analyzer/diffAnalyzer";
 import { analyzeMetadata } from "./analyzer/metadataAnalyzer";
 import { detectScope } from "./analyzer/scopeResolver";
 import { getCommitGenConfig } from "./config/configuration";
-import { buildMessage, composeDescription } from "./generator/messageComposer";
+import { buildMessage, composeBody, composeDescription } from "./generator/messageComposer";
 import { Status } from "./git/git";
 import { getChangeContext } from "./git/gitService";
 import { combineScores, resolveType } from "./scorer/commitScorer";
@@ -63,8 +63,14 @@ function mergeSignals(files: AnalyzedFile[], metadata: MetadataResult): Generati
   }
 
   const config = getCommitGenConfig();
-  const description = composeDescription(files, resolved.type, scope, config.largeCommitThreshold);
-  const message = buildMessage(resolved.type, scope, description, config.maxHeaderLength);
+  const description = composeDescription(files, resolved.type, scope);
+
+  let body: string | undefined;
+  if (config.includeBody && files.length > 0) {
+    body = composeBody(files, resolved.type);
+  }
+
+  const message = buildMessage(resolved.type, scope, description, config.maxHeaderLength, body);
 
   return {
     message,
@@ -138,23 +144,6 @@ async function generateCommitMessage(): Promise<void> {
   const metadata = analyzeMetadata(changeContext.changes, analyzedFiles);
   const result = mergeSignals(analyzedFiles, metadata);
   changeContext.repository.inputBox.value = result.message;
-
-  // Large commit advisory: exceeds configured threshold
-  if (config.warnOnLargeCommit && analyzedFiles.length > config.largeCommitThreshold) {
-    vscode.window
-      .showWarningMessage(
-        `Large commit: ${analyzedFiles.length} files staged. Consider splitting into smaller, focused commits for a cleaner history.`,
-        "OK",
-        "Don't warn again"
-      )
-      .then((choice) => {
-        if (choice === "Don't warn again") {
-          vscode.workspace
-            .getConfiguration("commitGen")
-            .update("warnOnLargeCommit", false, vscode.ConfigurationTarget.Global);
-        }
-      });
-  }
 
   if (config.showConfidence) {
     const percent = Math.round(result.confidence * 100);

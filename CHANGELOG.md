@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.0.4] - 2026-03-10
+## [0.1.0] - 2026-03-10
 
 ### Added — Professional Accuracy
 - **Deep Identity Extraction**: Extension now identifies specific function and class names from diff content and hunk headers (JS, TS, Python, and Go).
@@ -11,11 +11,12 @@ All notable changes to this project will be documented in this file.
     - **guard**: Null checks (`?.`, `!== null`, etc.).
     - **modernize**: ES6+ updates (e.g., `var` to `const`).
     - **validate**: Logic guards (`verify`, `sanitize`, `enforce`).
+- **Detailed Multi-line Body**: New feature to generate a bulleted list of all changed files and their specific contexts (e.g., function names) in the commit body.
 - **Dynamic Scoping**: Automatically infers scope from filename when directory-based scope is unavailable for single-file changes.
 
-### Optimized — Large Codebases
-- **Analysis Throttling**: Implemented line and size limits (300-line scannable limit per file) to prevent UI hangs on massive commits.
-- **Improved Performance**: Sequential file processing and reduced memory footprint during classification.
+### Performance Unlocked
+- **Unlimited Deep Analysis**: Removed all line-truncation (formerly 300 lines) and file-size limits. The extension now analyzes 100% of your changes for maximum accuracy.
+- **Removed Advisory Warnings**: Large commit warnings and thresholds have been removed to stay out of your way.
 
 ### Fixed/Cleanup
 - Optimized `package.json` by removing redundant `activationEvents` as suggested by VS Code linting.

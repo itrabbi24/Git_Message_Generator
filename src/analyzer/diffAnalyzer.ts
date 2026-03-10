@@ -14,8 +14,7 @@ import {
   isSourceCodeFile
 } from "../utils/patterns";
 
-const MAX_ANALYZE_LINES = 300; // Only scan first 300 lines for deep patterns
-const MAX_FILE_SIZE_BYTES = 100 * 1024; // 100KB limit for deep analysis
+// Full analysis: no hard line or size limits as requested by user.
 
 const IDENTIFIER_PATTERNS = [
   /^(?:export\s+)?(?:async\s+)?function\s+([a-zA-Z0-9_$]+)/, // JS/TS function
@@ -40,7 +39,7 @@ function extractContexts(file: DiffFile, addedLines: string[]): string[] {
   const contexts = new Set<string>();
 
   // Layer 1: Extract from @@ headers (Git's built-in heuristic)
-  for (const chunk of (file.chunks ?? []).slice(0, 10)) {
+  for (const chunk of (file.chunks ?? [])) {
     const match = chunk.content.match(/@@ .+ @@\s*(.+)/);
     if (match?.[1]) {
       contexts.add(match[1].trim());
@@ -48,7 +47,7 @@ function extractContexts(file: DiffFile, addedLines: string[]): string[] {
   }
 
   // Layer 2: Extract specific identifiers from added lines
-  for (const line of addedLines.slice(0, 100)) {
+  for (const line of addedLines) {
     const trimmed = line.trim();
     for (const pattern of IDENTIFIER_PATTERNS) {
       const match = trimmed.match(pattern);
@@ -200,9 +199,8 @@ export function parseFiles(rawDiff: string): AnalyzedFile[] {
     const allPrefixedLines = addedPrefixed.concat(removedPrefixed);
     const signals: Signal[] = [];
 
-    const isLargeFile = (file.additions ?? 0) + (file.deletions ?? 0) > 1000;
-    const linesToScan = isLargeFile ? addedPrefixed.slice(0, MAX_ANALYZE_LINES) : addedPrefixed;
-    const allLinesToScan = isLargeFile ? allPrefixedLines.slice(0, MAX_ANALYZE_LINES) : allPrefixedLines;
+    const linesToScan = addedPrefixed;
+    const allLinesToScan = allPrefixedLines;
 
     signals.push(...toSignals(linesToScan, FIX_PATTERNS, "fix", 0.3, "fix pattern matched"));
     signals.push(...toSignals(linesToScan, FEAT_PATTERNS, "feat", 0.25, "feature pattern matched"));
