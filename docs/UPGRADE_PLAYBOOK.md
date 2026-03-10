@@ -29,9 +29,14 @@ Rule: keep these types stable first, then update producer/consumer modules.
 ### `src/extension.ts`
 - Thin orchestration layer only.
 - Delegates change analysis to `analysisPipeline.ts`.
+- Delegates message generation to `core/generationEngine.ts`.
 - Applies confidence notification logic.
 - Emits optional local telemetry (`commitGen.debugTelemetry`) to `CommitGen` Output channel.
 - Exposes explain command: `commitGen.explainLast`.
+
+### `src/core/generationEngine.ts`
+- Pure generation layer for integration tests.
+- Applies profile selection, score fusion, scope selection, and message composition.
 
 ### `src/analyzer/analysisPipeline.ts`
 - Normalizes raw Git changes into `AnalyzedFile[]`.
@@ -112,6 +117,7 @@ Configured in `package.json` and parsed in `configuration.ts`:
 - `commitGen.scopeMapping`
 - `commitGen.typeOverrides`
 - `commitGen.profile`
+- `commitGen.autoDetectProfile`
 - `commitGen.messageStyle`
 - `commitGen.showConfidence`
 - `commitGen.includeWorkingTreeWhenNoStaged`
@@ -145,6 +151,8 @@ When adding a new setting, always update:
 ## 6) Test Coverage Map
 
 Current tests:
+- `test/generationEngine.integration.test.ts`
+- `test/profileWeights.test.ts`
 - `test/commitScorer.test.ts`
 - `test/diffAnalyzer.test.ts`
 - `test/messageComposer.test.ts`
@@ -179,6 +187,7 @@ Before commit:
 4. `npm run build`
 5. `npm run package:check`
 6. `npm run benchmark` (for performance-sensitive changes)
+7. `npm run release:plan` (before version bump/release PR)
 
 Before release:
 1. Update `CHANGELOG.md`.

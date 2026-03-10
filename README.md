@@ -20,6 +20,7 @@ Highlights:
 - Fully local: no network calls, no API keys.
 - Multi-signal scoring from path, diff content, and metadata.
 - Adaptive analysis profile support (`balanced`, `frontend`, `backend`, `infra`).
+- Auto profile detection from current change set (when profile is `balanced`).
 - Confidence-gated wording (high=precise, medium=neutral, low=conservative).
 - Supports `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`.
 - Message style profiles (`concise`, `balanced`, `verbose`).
@@ -51,6 +52,7 @@ Optional debugging command:
 | `commitGen.scopeMapping` | object | `{}` | Path prefix to scope mapping |
 | `commitGen.typeOverrides` | object | `{}` | Force commit type for matching prefixes |
 | `commitGen.profile` | string | `balanced` | Adaptive scoring profile: `balanced`, `frontend`, `backend`, `infra` |
+| `commitGen.autoDetectProfile` | boolean | `true` | Auto-detect profile from changed file patterns when profile is `balanced` |
 | `commitGen.messageStyle` | string | `balanced` | Message verbosity profile: `concise`, `balanced`, `verbose` |
 | `commitGen.showConfidence` | boolean | `true` | Show confidence notification |
 | `commitGen.includeWorkingTreeWhenNoStaged` | boolean | `true` | Fallback to unstaged changes |
@@ -68,6 +70,7 @@ Example:
     "scripts/deploy/": "ci"
   },
   "commitGen.profile": "backend",
+  "commitGen.autoDetectProfile": true,
   "commitGen.messageStyle": "verbose",
   "commitGen.maxRawDiffChars": 400000,
   "commitGen.bodyMaxLines": 10,
@@ -86,6 +89,7 @@ Each signal contributes a weight from `0` to `1`, then scores are combined proba
 - Combined score formula: `1 - (1 - current) * (1 - weight)`
 - Tie-breaks use commit type priority from `src/utils/patterns.ts`.
 - Profile-aware multipliers are applied before score fusion.
+- When `profile=balanced`, profile can be auto-inferred from file patterns.
 
 Message quality by confidence:
 - `>= 0.75`: specific wording with context/function names
@@ -121,6 +125,7 @@ npm run test
 npm run build
 npm run package:check
 npm run benchmark
+npm run release:plan
 ```
 
 Run extension locally:
@@ -137,6 +142,7 @@ GitHub Actions workflow validates:
 - package check (`vsce package`)
 
 Tagged releases (`v*.*.*`) automatically create a GitHub Release with VSIX artifact.
+Manual `Release Plan` workflow computes recommended semantic version bump from commit history.
 
 ## Project Structure
 

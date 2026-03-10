@@ -1,3 +1,4 @@
+import { AnalyzedFile } from "../types";
 import { AnalysisProfile } from "../config/configuration";
 import { Signal } from "../types";
 
@@ -42,4 +43,53 @@ export function adjustSignalForProfile(signal: Signal, profile: AnalysisProfile)
     weight: adjustedWeight,
     reason: `${signal.reason} [profile:${profile}]`
   };
+}
+
+function hasAny(path: string, parts: string[]): boolean {
+  return parts.some((part) => path.includes(part));
+}
+
+export function detectProfileFromFiles(files: AnalyzedFile[]): AnalysisProfile {
+  let frontend = 0;
+  let backend = 0;
+  let infra = 0;
+
+  for (const file of files) {
+    const p = file.path.toLowerCase();
+
+    if (hasAny(p, [".tsx", ".jsx", ".vue", ".svelte", ".css", ".scss", "/components/", "/pages/", "/ui/"])) {
+      frontend += 2;
+    }
+    if (hasAny(p, ["/api/", "/server/", "/controllers/", "/routes/", "/db/", ".go", ".py", ".java", ".cs"])) {
+      backend += 2;
+    }
+    if (
+      hasAny(p, [
+        ".github/workflows/",
+        "dockerfile",
+        "docker-compose",
+        "/k8s/",
+        "/kubernetes/",
+        "/terraform/",
+        ".tf",
+        "helm",
+        "package-lock.json",
+        "yarn.lock",
+        "pnpm-lock.yaml"
+      ])
+    ) {
+      infra += 2;
+    }
+  }
+
+  if (infra >= frontend && infra >= backend && infra >= 3) {
+    return "infra";
+  }
+  if (frontend >= backend && frontend >= 3) {
+    return "frontend";
+  }
+  if (backend >= 3) {
+    return "backend";
+  }
+  return "balanced";
 }

@@ -1,6 +1,6 @@
 import * as path from "path";
 import * as vscode from "vscode";
-import { CommitGenConfig } from "../config/configuration";
+import type { CommitGenConfig } from "../config/configuration";
 import { Change, Status } from "../git/git";
 import { parseFiles } from "./diffAnalyzer";
 import { classifyByPath } from "./fileClassifier";

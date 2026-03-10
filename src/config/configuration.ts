@@ -30,6 +30,7 @@ export interface CommitGenConfig {
   bodyMaxContextsPerFile: number;
   debugTelemetry: boolean;
   profile: AnalysisProfile;
+  autoDetectProfile: boolean;
   messageStyle: MessageStyle;
   scopeMapping: Record<string, string>;
   typeOverrides: Record<string, CommitType>;
@@ -117,6 +118,7 @@ export function getCommitGenConfig(): CommitGenConfig {
     bodyMaxContextsPerFile,
     debugTelemetry: config.get<boolean>("debugTelemetry", false),
     profile: normalizeProfile(config.get("profile", "balanced")),
+    autoDetectProfile: config.get<boolean>("autoDetectProfile", true),
     messageStyle: normalizeMessageStyle(config.get("messageStyle", "balanced")),
     scopeMapping: normalizeScopeMapping(config.get("scopeMapping", {})),
     typeOverrides: normalizeTypeOverrides(config.get("typeOverrides", {})),

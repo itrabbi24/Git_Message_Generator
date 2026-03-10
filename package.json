@@ -145,6 +145,11 @@
           ],
           "description": "Adaptive weighting profile to bias signal scoring by project type."
         },
+        "commitGen.autoDetectProfile": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically infer profile from current change set when profile is balanced."
+        },
         "commitGen.messageStyle": {
           "type": "string",
           "default": "balanced",
@@ -162,8 +167,10 @@
     "build": "tsc -p .",
     "typecheck": "tsc -p . --noEmit",
     "watch": "tsc -w -p .",
-    "test": "tsx --test test/commitScorer.test.ts test/diffAnalyzer.test.ts test/messageComposer.test.ts test/scopeCore.test.ts test/goldenMessages.test.ts",
+    "test": "tsx --test test/generationEngine.integration.test.ts test/profileWeights.test.ts test/commitScorer.test.ts test/diffAnalyzer.test.ts test/messageComposer.test.ts test/scopeCore.test.ts test/goldenMessages.test.ts",
     "benchmark": "tsx scripts/benchmark.ts",
+    "release:plan": "tsx scripts/releasePlan.ts",
+    "release:plan:apply": "tsx scripts/releasePlan.ts --apply",
     "lint": "eslint . --ext .ts",
     "format": "prettier --check .",
     "format:write": "prettier --write .",

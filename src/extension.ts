@@ -1,13 +1,9 @@
-﻿import * as path from "path";
-import * as vscode from "vscode";
+﻿import * as vscode from "vscode";
 import { analyzeChanges } from "./analyzer/analysisPipeline";
-import { defaultSourceType } from "./analyzer/fileClassifier";
-import { detectScope } from "./analyzer/scopeResolver";
 import { getCommitGenConfig } from "./config/configuration";
-import { buildMessage, composeBody, composeDescription } from "./generator/messageComposer";
+import { generateFromAnalysis } from "./core/generationEngine";
 import { getChangeContext } from "./git/gitService";
-import { combineScores, resolveType } from "./scorer/commitScorer";
-import { AnalyzedFile, GenerationResult, MetadataResult, Signal } from "./types";
+import { Signal } from "./types";
 
 let telemetryChannel: vscode.OutputChannel | undefined;
 let lastGenerationReport:
@@ -16,6 +12,7 @@ let lastGenerationReport:
     type: string;
     scope: string | null;
     confidence: number;
+    profileUsed: string;
     signals: Signal[];
     usedDiffFallback: boolean;
   }
@@ -33,57 +30,6 @@ function summarizeTopSignals(signals: Signal[], limit = 7): string[] {
     .sort((a, b) => b.weight - a.weight)
     .slice(0, limit)
     .map((signal) => `${signal.type.padEnd(8)} w=${signal.weight.toFixed(3)} source=${signal.source} :: ${signal.reason}`);
-}
-
-function mergeSignals(files: AnalyzedFile[], metadata: MetadataResult, config: ReturnType<typeof getCommitGenConfig>): GenerationResult {
-  const allSignals = files.flatMap((file) => file.signals).concat(metadata.signals);
-  if (allSignals.length === 0) {
-    allSignals.push({
-      type: defaultSourceType(),
-      source: "metadata",
-      weight: 0.4,
-      reason: "default source classification"
-    });
-  }
-
-  const scores = combineScores(allSignals, config.profile);
-  const resolved = resolveType(scores);
-  let scope = detectScope(
-    files.map((file) => file.path),
-    metadata.isDepsOnly
-  );
-
-  if (!scope && files.length === 1 && !files[0].isBinary) {
-    // Single-file fallback keeps headers specific even when directory scope is absent.
-    const filename = path.posix.basename(files[0].path);
-    const dot = filename.lastIndexOf(".");
-    scope = dot > 0 ? filename.slice(0, dot) : filename;
-  }
-
-  const description = composeDescription(files, resolved.type, scope, {
-    confidence: resolved.confidence,
-    style: config.messageStyle
-  });
-
-  let body: string | undefined;
-  if (config.includeBody && files.length > 0) {
-    body = composeBody(files, resolved.type, {
-      maxLines: config.bodyMaxLines,
-      maxContextsPerFile: config.bodyMaxContextsPerFile,
-      confidence: resolved.confidence,
-      style: config.messageStyle
-    });
-  }
-
-  const message = buildMessage(resolved.type, scope, description, config.maxHeaderLength, body);
-
-  return {
-    message,
-    type: resolved.type,
-    scope,
-    confidence: resolved.confidence,
-    signals: allSignals
-  };
 }
 
 async function generateCommitMessage(): Promise<void> {
@@ -113,13 +59,15 @@ async function generateCommitMessage(): Promise<void> {
     config
   });
 
-  const result = mergeSignals(pipeline.files, pipeline.metadata, config);
+  const generated = generateFromAnalysis(pipeline.files, pipeline.metadata, config);
+  const result = generated.result;
   changeContext.repository.inputBox.value = result.message;
   lastGenerationReport = {
     message: result.message,
     type: result.type,
     scope: result.scope,
     confidence: result.confidence,
+    profileUsed: generated.diagnostics.profileUsed,
     signals: result.signals,
     usedDiffFallback: pipeline.usedDiffFallback
   };
@@ -131,7 +79,7 @@ async function generateCommitMessage(): Promise<void> {
       `[CommitGen] source=${changeContext.source} files=${pipeline.files.length} parseMs=${pipeline.parseMs} totalMs=${Date.now() - telemetryStart}`
     );
     channel.appendLine(
-      `[CommitGen] trackedLines=${pipeline.trackedDiffLines} totalLines=${pipeline.totalDiffLines} truncatedFiles=${pipeline.truncatedFiles} usedDiffFallback=${pipeline.usedDiffFallback} confidence=${Math.round(
+      `[CommitGen] trackedLines=${pipeline.trackedDiffLines} totalLines=${pipeline.totalDiffLines} truncatedFiles=${pipeline.truncatedFiles} usedDiffFallback=${pipeline.usedDiffFallback} profile=${generated.diagnostics.profileUsed} confidence=${Math.round(
         result.confidence * 100
       )}% type=${result.type} scope=${result.scope ?? "none"}`
     );
@@ -164,7 +112,7 @@ function explainLastGeneration(): void {
   channel.appendLine("[CommitGen] ---- Explain Last Generation ----");
   channel.appendLine(`[CommitGen] message=${lastGenerationReport.message}`);
   channel.appendLine(
-    `[CommitGen] type=${lastGenerationReport.type} scope=${lastGenerationReport.scope ?? "none"} confidence=${Math.round(
+    `[CommitGen] type=${lastGenerationReport.type} scope=${lastGenerationReport.scope ?? "none"} profile=${lastGenerationReport.profileUsed} confidence=${Math.round(
       lastGenerationReport.confidence * 100
     )}% usedDiffFallback=${lastGenerationReport.usedDiffFallback}`
   );

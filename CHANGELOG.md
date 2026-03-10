@@ -27,6 +27,11 @@ All notable changes to this project are documented in this file.
   - `npm run benchmark`
 - Automated tag-based release workflow:
   - `.github/workflows/release.yml`
+- Release planning workflow and script:
+  - `.github/workflows/release-plan.yml`
+  - `npm run release:plan`
+- New pure generation layer for integration-style testing:
+  - `src/core/generationEngine.ts`
 
 ### Changed
 - Analysis orchestration moved into `src/analyzer/analysisPipeline.ts` for cleaner layering.
@@ -41,7 +46,9 @@ All notable changes to this project are documented in this file.
 - Score combination now clamps invalid weights and rounds to fixed precision for deterministic behavior.
 - Multi-scope fallback now summarizes top areas (e.g., `src+docs modules`).
 - Added adaptive scoring profile support (`balanced`, `frontend`, `backend`, `infra`).
+- Added auto profile detection (`commitGen.autoDetectProfile`) when profile is balanced.
 - Added message style profiles (`concise`, `balanced`, `verbose`).
+- Expanded golden fixture coverage with additional realistic scenarios.
 
 ### Removed
 - Tracked `.vsix` release artifacts from repository.
