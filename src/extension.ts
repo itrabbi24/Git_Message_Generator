@@ -7,15 +7,32 @@ import { getCommitGenConfig } from "./config/configuration";
 import { buildMessage, composeBody, composeDescription } from "./generator/messageComposer";
 import { getChangeContext } from "./git/gitService";
 import { combineScores, resolveType } from "./scorer/commitScorer";
-import { AnalyzedFile, GenerationResult, MetadataResult } from "./types";
+import { AnalyzedFile, GenerationResult, MetadataResult, Signal } from "./types";
 
 let telemetryChannel: vscode.OutputChannel | undefined;
+let lastGenerationReport:
+  | {
+    message: string;
+    type: string;
+    scope: string | null;
+    confidence: number;
+    signals: Signal[];
+    usedDiffFallback: boolean;
+  }
+  | undefined;
 
 function getTelemetryChannel(): vscode.OutputChannel {
   if (!telemetryChannel) {
     telemetryChannel = vscode.window.createOutputChannel("CommitGen");
   }
   return telemetryChannel;
+}
+
+function summarizeTopSignals(signals: Signal[], limit = 7): string[] {
+  return [...signals]
+    .sort((a, b) => b.weight - a.weight)
+    .slice(0, limit)
+    .map((signal) => `${signal.type.padEnd(8)} w=${signal.weight.toFixed(3)} source=${signal.source} :: ${signal.reason}`);
 }
 
 function mergeSignals(files: AnalyzedFile[], metadata: MetadataResult, config: ReturnType<typeof getCommitGenConfig>): GenerationResult {
@@ -29,7 +46,7 @@ function mergeSignals(files: AnalyzedFile[], metadata: MetadataResult, config: R
     });
   }
 
-  const scores = combineScores(allSignals);
+  const scores = combineScores(allSignals, config.profile);
   const resolved = resolveType(scores);
   let scope = detectScope(
     files.map((file) => file.path),
@@ -43,14 +60,18 @@ function mergeSignals(files: AnalyzedFile[], metadata: MetadataResult, config: R
     scope = dot > 0 ? filename.slice(0, dot) : filename;
   }
 
-  const description = composeDescription(files, resolved.type, scope, { confidence: resolved.confidence });
+  const description = composeDescription(files, resolved.type, scope, {
+    confidence: resolved.confidence,
+    style: config.messageStyle
+  });
 
   let body: string | undefined;
   if (config.includeBody && files.length > 0) {
     body = composeBody(files, resolved.type, {
       maxLines: config.bodyMaxLines,
       maxContextsPerFile: config.bodyMaxContextsPerFile,
-      confidence: resolved.confidence
+      confidence: resolved.confidence,
+      style: config.messageStyle
     });
   }
 
@@ -94,6 +115,14 @@ async function generateCommitMessage(): Promise<void> {
 
   const result = mergeSignals(pipeline.files, pipeline.metadata, config);
   changeContext.repository.inputBox.value = result.message;
+  lastGenerationReport = {
+    message: result.message,
+    type: result.type,
+    scope: result.scope,
+    confidence: result.confidence,
+    signals: result.signals,
+    usedDiffFallback: pipeline.usedDiffFallback
+  };
 
   if (config.debugTelemetry) {
     // Output channel telemetry stays local and helps tune caps for large repositories.
@@ -125,6 +154,26 @@ async function generateCommitMessage(): Promise<void> {
   }
 }
 
+function explainLastGeneration(): void {
+  if (!lastGenerationReport) {
+    vscode.window.showInformationMessage("No generated commit message found in this session yet.");
+    return;
+  }
+
+  const channel = getTelemetryChannel();
+  channel.appendLine("[CommitGen] ---- Explain Last Generation ----");
+  channel.appendLine(`[CommitGen] message=${lastGenerationReport.message}`);
+  channel.appendLine(
+    `[CommitGen] type=${lastGenerationReport.type} scope=${lastGenerationReport.scope ?? "none"} confidence=${Math.round(
+      lastGenerationReport.confidence * 100
+    )}% usedDiffFallback=${lastGenerationReport.usedDiffFallback}`
+  );
+  for (const line of summarizeTopSignals(lastGenerationReport.signals)) {
+    channel.appendLine(`[CommitGen] ${line}`);
+  }
+  channel.show(true);
+}
+
 export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     vscode.commands.registerCommand("commitGen.generate", async () => {
@@ -136,9 +185,15 @@ export function activate(context: vscode.ExtensionContext): void {
       }
     })
   );
+  context.subscriptions.push(
+    vscode.commands.registerCommand("commitGen.explainLast", () => {
+      explainLastGeneration();
+    })
+  );
 }
 
 export function deactivate(): void {
   telemetryChannel?.dispose();
   telemetryChannel = undefined;
+  lastGenerationReport = undefined;
 }

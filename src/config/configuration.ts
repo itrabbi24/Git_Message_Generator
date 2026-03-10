@@ -15,6 +15,12 @@ const COMMIT_TYPES: ReadonlySet<CommitType> = new Set([
   "revert"
 ]);
 
+const ANALYSIS_PROFILES = new Set(["balanced", "frontend", "backend", "infra"] as const);
+const MESSAGE_STYLES = new Set(["concise", "balanced", "verbose"] as const);
+
+export type AnalysisProfile = "balanced" | "frontend" | "backend" | "infra";
+export type MessageStyle = "concise" | "balanced" | "verbose";
+
 export interface CommitGenConfig {
   maxHeaderLength: number;
   maxAnalyzedLinesPerFile: number;
@@ -23,6 +29,8 @@ export interface CommitGenConfig {
   bodyMaxLines: number;
   bodyMaxContextsPerFile: number;
   debugTelemetry: boolean;
+  profile: AnalysisProfile;
+  messageStyle: MessageStyle;
   scopeMapping: Record<string, string>;
   typeOverrides: Record<string, CommitType>;
   showConfidence: boolean;
@@ -76,6 +84,22 @@ function normalizeTypeOverrides(raw: unknown): Record<string, CommitType> {
   return normalized;
 }
 
+function normalizeProfile(value: unknown): AnalysisProfile {
+  if (typeof value !== "string") {
+    return "balanced";
+  }
+  const normalized = value.trim().toLowerCase() as AnalysisProfile;
+  return ANALYSIS_PROFILES.has(normalized) ? normalized : "balanced";
+}
+
+function normalizeMessageStyle(value: unknown): MessageStyle {
+  if (typeof value !== "string") {
+    return "balanced";
+  }
+  const normalized = value.trim().toLowerCase() as MessageStyle;
+  return MESSAGE_STYLES.has(normalized) ? normalized : "balanced";
+}
+
 export function getCommitGenConfig(): CommitGenConfig {
   const config = vscode.workspace.getConfiguration("commitGen");
   const maxAnalyzedLinesPerFile = Math.max(100, config.get<number>("maxAnalyzedLinesPerFile", 1200));
@@ -92,6 +116,8 @@ export function getCommitGenConfig(): CommitGenConfig {
     bodyMaxLines,
     bodyMaxContextsPerFile,
     debugTelemetry: config.get<boolean>("debugTelemetry", false),
+    profile: normalizeProfile(config.get("profile", "balanced")),
+    messageStyle: normalizeMessageStyle(config.get("messageStyle", "balanced")),
     scopeMapping: normalizeScopeMapping(config.get("scopeMapping", {})),
     typeOverrides: normalizeTypeOverrides(config.get("typeOverrides", {})),
     showConfidence: config.get<boolean>("showConfidence", true),

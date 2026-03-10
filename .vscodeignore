@@ -3,6 +3,8 @@ src/**
 .gitignore
 .github/**
 .claude/**
+docs/**
+scripts/**
 test/**
 .eslintrc.cjs
 .prettierrc.json

@@ -17,6 +17,21 @@
     "expectedHeader": "fix(auth): resolve handleLogin"
   },
   {
+    "name": "medium_conf_single_fix_neutral",
+    "type": "fix",
+    "scope": "auth",
+    "confidence": 0.62,
+    "maxHeaderLength": 72,
+    "files": [
+      {
+        "path": "src/auth/login.ts",
+        "status": "M",
+        "functionContexts": ["handleLogin"]
+      }
+    ],
+    "expectedHeader": "fix(auth): update handleLogin"
+  },
+  {
     "name": "low_conf_multi_scope",
     "type": "feat",
     "scope": null,
@@ -28,7 +43,7 @@
       { "path": "src/orders/create.ts", "status": "M" },
       { "path": "src/profile/view.ts", "status": "M" }
     ],
-    "expectedHeader": "feat: update core modules"
+    "expectedHeader": "feat: update src modules"
   },
   {
     "name": "rename_low_similarity",
@@ -45,5 +60,63 @@
       }
     ],
     "expectedHeader": "refactor(core): remove legacyEngine.ts and add newEngine.ts"
+  },
+  {
+    "name": "deps_version_bump",
+    "type": "build",
+    "scope": "deps",
+    "confidence": 0.88,
+    "maxHeaderLength": 72,
+    "files": [
+      {
+        "path": "package.json",
+        "status": "M",
+        "addedLines": ["  \"version\": \"0.1.2\""],
+        "removedLines": ["  \"version\": \"0.1.1\""]
+      }
+    ],
+    "expectedHeader": "build(deps): bump package version"
+  },
+  {
+    "name": "ci_small_group",
+    "type": "ci",
+    "scope": null,
+    "confidence": 0.81,
+    "maxHeaderLength": 72,
+    "files": [
+      { "path": ".github/workflows/ci.yml", "status": "M" },
+      { "path": ".github/workflows/release.yml", "status": "M" }
+    ],
+    "expectedHeader": "ci: update ci.yml, release.yml"
+  },
+  {
+    "name": "concise_style_many_files",
+    "type": "feat",
+    "scope": null,
+    "style": "concise",
+    "confidence": 0.83,
+    "maxHeaderLength": 72,
+    "files": [
+      { "path": "src/auth/a.ts", "status": "M" },
+      { "path": "src/payments/b.ts", "status": "M" },
+      { "path": "src/orders/c.ts", "status": "M" },
+      { "path": "src/profile/d.ts", "status": "M" }
+    ],
+    "expectedHeader": "feat: implement src modules"
+  },
+  {
+    "name": "verbose_style_scope",
+    "type": "perf",
+    "scope": "ui",
+    "style": "verbose",
+    "confidence": 0.79,
+    "maxHeaderLength": 72,
+    "files": [
+      { "path": "src/ui/list.tsx", "status": "M", "functionContexts": ["renderList"] },
+      { "path": "src/ui/cache.ts", "status": "M" },
+      { "path": "src/ui/state.ts", "status": "M" },
+      { "path": "src/ui/events.ts", "status": "M" }
+    ],
+    "expectedHeader": "perf(ui): optimize ui performance"
   }
 ]

@@ -1,5 +1,7 @@
+import { AnalysisProfile } from "../config/configuration";
 import { CommitType, Signal } from "../types";
 import { TYPE_PRIORITY } from "../utils/patterns";
+import { adjustSignalForProfile } from "./profileWeights";
 
 function normalizeWeight(weight: number): number {
   if (!Number.isFinite(weight)) {
@@ -8,9 +10,10 @@ function normalizeWeight(weight: number): number {
   return Math.min(1, Math.max(0, weight));
 }
 
-export function combineScores(signals: Signal[]): Map<CommitType, number> {
+export function combineScores(signals: Signal[], profile: AnalysisProfile = "balanced"): Map<CommitType, number> {
   const scores = new Map<CommitType, number>();
-  for (const signal of signals) {
+  for (const rawSignal of signals) {
+    const signal = adjustSignalForProfile(rawSignal, profile);
     const current = scores.get(signal.type) ?? 0;
     // Probabilistic accumulation keeps score in [0,1] and rewards repeated evidence.
     const combined = 1 - (1 - current) * (1 - normalizeWeight(signal.weight));

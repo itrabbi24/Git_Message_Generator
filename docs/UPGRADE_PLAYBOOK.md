@@ -31,6 +31,7 @@ Rule: keep these types stable first, then update producer/consumer modules.
 - Delegates change analysis to `analysisPipeline.ts`.
 - Applies confidence notification logic.
 - Emits optional local telemetry (`commitGen.debugTelemetry`) to `CommitGen` Output channel.
+- Exposes explain command: `commitGen.explainLast`.
 
 ### `src/analyzer/analysisPipeline.ts`
 - Normalizes raw Git changes into `AnalyzedFile[]`.
@@ -75,6 +76,7 @@ Rule: keep these types stable first, then update producer/consumer modules.
 - Combines signals with probabilistic formula:
   - `1 - (1 - current) * (1 - weight)`
 - Resolves near ties with fixed `TYPE_PRIORITY`.
+- Supports profile-aware weighting via `commitGen.profile`.
 
 ### `src/generator/messageComposer.ts`
 - Builds final description/body/header.
@@ -86,6 +88,10 @@ Rule: keep these types stable first, then update producer/consumer modules.
   - max lines
   - max contexts per file
   - overflow summary line
+- Message style profile support:
+  - `concise`
+  - `balanced`
+  - `verbose`
 
 ### `src/generator/verbSelector.ts`
 - Chooses intent-aware verbs from diff semantics (`guard`, `memoize`, `expose`, etc.).
@@ -105,6 +111,8 @@ Configured in `package.json` and parsed in `configuration.ts`:
 - `commitGen.bodyMaxContextsPerFile`
 - `commitGen.scopeMapping`
 - `commitGen.typeOverrides`
+- `commitGen.profile`
+- `commitGen.messageStyle`
 - `commitGen.showConfidence`
 - `commitGen.includeWorkingTreeWhenNoStaged`
 - `commitGen.includeBody`
@@ -142,6 +150,7 @@ Current tests:
 - `test/messageComposer.test.ts`
 - `test/scopeCore.test.ts`
 - `test/goldenMessages.test.ts`
+- `test/fixtures/golden-messages.json`
 
 What each protects:
 - scorer math and tie behavior
@@ -169,6 +178,7 @@ Before commit:
 3. `npm run test`
 4. `npm run build`
 5. `npm run package:check`
+6. `npm run benchmark` (for performance-sensitive changes)
 
 Before release:
 1. Update `CHANGELOG.md`.

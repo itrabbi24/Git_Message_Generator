@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import test from "node:test";
+import { MessageStyle } from "../src/config/configuration";
 import { buildMessage, composeDescription } from "../src/generator/messageComposer";
 import { AnalyzedFile, CommitType, FileStatus } from "../src/types";
 
@@ -20,6 +21,7 @@ interface GoldenCase {
   type: CommitType;
   scope: string | null;
   confidence: number;
+  style?: MessageStyle;
   maxHeaderLength: number;
   files: GoldenFile[];
   expectedHeader: string;
@@ -47,7 +49,10 @@ test("golden messages stay stable", () => {
 
   for (const scenario of cases) {
     const files = scenario.files.map(toAnalyzedFile);
-    const description = composeDescription(files, scenario.type, scenario.scope, { confidence: scenario.confidence });
+    const description = composeDescription(files, scenario.type, scenario.scope, {
+      confidence: scenario.confidence,
+      style: scenario.style ?? "balanced"
+    });
     const message = buildMessage(scenario.type, scenario.scope, description, scenario.maxHeaderLength);
     const header = message.split("\n")[0];
     assert.equal(header, scenario.expectedHeader, `golden mismatch: ${scenario.name}`);

@@ -33,3 +33,14 @@ test("combineScores clamps invalid weights", () => {
   const scores = combineScores(signals);
   assert.equal(scores.get("feat"), 1);
 });
+
+test("combineScores applies infra profile bias", () => {
+  const signals: Signal[] = [
+    { type: "feat", source: "filepath", weight: 0.7, reason: "feature" },
+    { type: "ci", source: "filepath", weight: 0.68, reason: "workflow" }
+  ];
+
+  const balanced = combineScores(signals, "balanced");
+  const infra = combineScores(signals, "infra");
+  assert.ok((infra.get("ci") ?? 0) > (balanced.get("ci") ?? 0));
+});

@@ -21,6 +21,12 @@ All notable changes to this project are documented in this file.
 - Golden output regression harness:
   - `test/goldenMessages.test.ts`
   - `test/fixtures/golden-messages.json`
+- Explain command:
+  - `commitGen.explainLast`
+- Benchmark script:
+  - `npm run benchmark`
+- Automated tag-based release workflow:
+  - `.github/workflows/release.yml`
 
 ### Changed
 - Analysis orchestration moved into `src/analyzer/analysisPipeline.ts` for cleaner layering.
@@ -33,6 +39,9 @@ All notable changes to this project are documented in this file.
 - Configuration parsing now sanitizes invalid mapping and type override entries.
 - Confidence-gated wording now reduces over-specific text for medium/low confidence cases.
 - Score combination now clamps invalid weights and rounds to fixed precision for deterministic behavior.
+- Multi-scope fallback now summarizes top areas (e.g., `src+docs modules`).
+- Added adaptive scoring profile support (`balanced`, `frontend`, `backend`, `infra`).
+- Added message style profiles (`concise`, `balanced`, `verbose`).
 
 ### Removed
 - Tracked `.vsix` release artifacts from repository.

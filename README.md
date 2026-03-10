@@ -19,8 +19,10 @@ This extension analyzes your Git diff and generates a Conventional Commits messa
 Highlights:
 - Fully local: no network calls, no API keys.
 - Multi-signal scoring from path, diff content, and metadata.
+- Adaptive analysis profile support (`balanced`, `frontend`, `backend`, `infra`).
 - Confidence-gated wording (high=precise, medium=neutral, low=conservative).
 - Supports `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`.
+- Message style profiles (`concise`, `balanced`, `verbose`).
 - Optional multi-line commit body with per-file context.
 - Upgrade reference for maintainers: [`docs/UPGRADE_PLAYBOOK.md`](./docs/UPGRADE_PLAYBOOK.md)
 
@@ -32,6 +34,9 @@ Highlights:
 3. Open Source Control.
 4. Run `Generate Git Message`.
 5. Review and commit.
+
+Optional debugging command:
+- Run `Explain Last Generated Git Message` to inspect top scoring signals and confidence drivers.
 
 ## Configuration
 
@@ -45,6 +50,8 @@ Highlights:
 | `commitGen.bodyMaxContextsPerFile` | number | `2` | Max contexts listed for each file in body |
 | `commitGen.scopeMapping` | object | `{}` | Path prefix to scope mapping |
 | `commitGen.typeOverrides` | object | `{}` | Force commit type for matching prefixes |
+| `commitGen.profile` | string | `balanced` | Adaptive scoring profile: `balanced`, `frontend`, `backend`, `infra` |
+| `commitGen.messageStyle` | string | `balanced` | Message verbosity profile: `concise`, `balanced`, `verbose` |
 | `commitGen.showConfidence` | boolean | `true` | Show confidence notification |
 | `commitGen.includeWorkingTreeWhenNoStaged` | boolean | `true` | Fallback to unstaged changes |
 | `commitGen.includeBody` | boolean | `true` | Include multi-line body |
@@ -60,6 +67,8 @@ Example:
   "commitGen.typeOverrides": {
     "scripts/deploy/": "ci"
   },
+  "commitGen.profile": "backend",
+  "commitGen.messageStyle": "verbose",
   "commitGen.maxRawDiffChars": 400000,
   "commitGen.bodyMaxLines": 10,
   "commitGen.debugTelemetry": true
@@ -76,6 +85,7 @@ Signals are combined from three sources:
 Each signal contributes a weight from `0` to `1`, then scores are combined probabilistically:
 - Combined score formula: `1 - (1 - current) * (1 - weight)`
 - Tie-breaks use commit type priority from `src/utils/patterns.ts`.
+- Profile-aware multipliers are applied before score fusion.
 
 Message quality by confidence:
 - `>= 0.75`: specific wording with context/function names
@@ -110,6 +120,7 @@ npm run typecheck
 npm run test
 npm run build
 npm run package:check
+npm run benchmark
 ```
 
 Run extension locally:
@@ -124,6 +135,8 @@ GitHub Actions workflow validates:
 - build
 - tests
 - package check (`vsce package`)
+
+Tagged releases (`v*.*.*`) automatically create a GitHub Release with VSIX artifact.
 
 ## Project Structure
 

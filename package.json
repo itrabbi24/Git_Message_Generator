@@ -40,6 +40,10 @@
           "light": "./assets/icon-light.svg",
           "dark": "./assets/icon-dark.svg"
         }
+      },
+      {
+        "command": "commitGen.explainLast",
+        "title": "Explain Last Generated Git Message"
       }
     ],
     "menus": {
@@ -53,6 +57,10 @@
       "commandPalette": [
         {
           "command": "commitGen.generate",
+          "when": "workspaceFolderCount > 0"
+        },
+        {
+          "command": "commitGen.explainLast",
           "when": "workspaceFolderCount > 0"
         }
       ]
@@ -125,6 +133,27 @@
           "type": "boolean",
           "default": false,
           "description": "Emit local analysis metrics (timings and line caps) to the CommitGen Output channel."
+        },
+        "commitGen.profile": {
+          "type": "string",
+          "default": "balanced",
+          "enum": [
+            "balanced",
+            "frontend",
+            "backend",
+            "infra"
+          ],
+          "description": "Adaptive weighting profile to bias signal scoring by project type."
+        },
+        "commitGen.messageStyle": {
+          "type": "string",
+          "default": "balanced",
+          "enum": [
+            "concise",
+            "balanced",
+            "verbose"
+          ],
+          "description": "Controls verbosity of generated header/body text."
         }
       }
     }
@@ -134,6 +163,7 @@
     "typecheck": "tsc -p . --noEmit",
     "watch": "tsc -w -p .",
     "test": "tsx --test test/commitScorer.test.ts test/diffAnalyzer.test.ts test/messageComposer.test.ts test/scopeCore.test.ts test/goldenMessages.test.ts",
+    "benchmark": "tsx scripts/benchmark.ts",
     "lint": "eslint . --ext .ts",
     "format": "prettier --check .",
     "format:write": "prettier --write .",

@@ -1,4 +1,5 @@
 import * as path from "path";
+import { MessageStyle } from "../config/configuration";
 import { AnalyzedFile, CommitType, FileStatus } from "../types";
 import { isDependencyFile, isLockFile } from "../utils/patterns";
 import { STATUS_VERBS } from "../utils/statusVerbs";
@@ -113,6 +114,7 @@ function topLevelArea(filePath: string): string {
 
 export interface ComposeDescriptionOptions {
   confidence?: number;
+  style?: MessageStyle;
 }
 
 function neutralVerbForStatus(status: FileStatus): string {
@@ -125,6 +127,19 @@ function neutralVerbForStatus(status: FileStatus): string {
   return "update";
 }
 
+function summarizeAreas(files: AnalyzedFile[], maxAreas: number): string {
+  const counts = new Map<string, number>();
+  for (const file of files) {
+    const area = topLevelArea(file.path);
+    counts.set(area, (counts.get(area) ?? 0) + 1);
+  }
+  const top = [...counts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, maxAreas)
+    .map(([area]) => area);
+  return top.join("+");
+}
+
 export function composeDescription(
   files: AnalyzedFile[],
   commitType: CommitType,
@@ -132,6 +147,7 @@ export function composeDescription(
   options: ComposeDescriptionOptions = {}
 ): string {
   const confidence = options.confidence ?? 1;
+  const style = options.style ?? "balanced";
   const isLowConfidence = confidence < 0.5;
   const isMediumConfidence = !isLowConfidence && confidence < 0.75;
   const ranked = [...files].sort((a, b) => significance(b) - significance(a));
@@ -145,7 +161,8 @@ export function composeDescription(
       return `update ${scope} files`;
     }
     if (files.length > 3) {
-      return "update core modules";
+      const areaSummary = summarizeAreas(files, 2);
+      return areaSummary ? `update ${areaSummary} modules` : "update core modules";
     }
     return "update changed files";
   }
@@ -204,29 +221,33 @@ export function composeDescription(
   }
 
   if (files.length > 20) {
-    return `${verb} multiple modules`;
+    return style === "concise" ? `${verb} modules` : `${verb} multiple modules`;
   }
 
   if (!scope && files.length >= 4) {
-    const areas = unique(files.map((file) => topLevelArea(file.path)));
-    if (areas.length > 1) {
-      return `${verb} core modules`;
+    const areaSummary = summarizeAreas(files, style === "verbose" ? 3 : 2);
+    if (areaSummary) {
+      return `${verb} ${areaSummary} modules`;
     }
   }
 
-  return `${verb} ${files.length} changed files`;
+  return style === "concise" ? `${verb} files` : `${verb} ${files.length} changed files`;
 }
 
 export interface ComposeBodyOptions {
   maxLines?: number;
   maxContextsPerFile?: number;
   confidence?: number;
+  style?: MessageStyle;
 }
 
 export function composeBody(files: AnalyzedFile[], commitType: CommitType, options: ComposeBodyOptions = {}): string {
-  const maxLines = Math.max(3, options.maxLines ?? 12);
+  const style = options.style ?? "balanced";
+  const styleMaxLines = style === "concise" ? 6 : style === "verbose" ? 18 : 12;
+  const styleMaxContexts = style === "concise" ? 1 : style === "verbose" ? 4 : 2;
+  const maxLines = Math.max(3, options.maxLines ?? styleMaxLines);
   const confidence = options.confidence ?? 1;
-  const maxContextsPerFile = confidence < 0.5 ? 0 : Math.max(1, options.maxContextsPerFile ?? 2);
+  const maxContextsPerFile = confidence < 0.5 ? 0 : Math.max(1, options.maxContextsPerFile ?? styleMaxContexts);
   const lines: string[] = [];
 
   for (const file of files) {
