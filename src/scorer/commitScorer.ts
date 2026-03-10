@@ -5,6 +5,7 @@ export function combineScores(signals: Signal[]): Map<CommitType, number> {
   const scores = new Map<CommitType, number>();
   for (const signal of signals) {
     const current = scores.get(signal.type) ?? 0;
+    // Probabilistic accumulation keeps score in [0,1] and rewards repeated evidence.
     const combined = 1 - (1 - current) * (1 - signal.weight);
     scores.set(signal.type, combined);
   }
@@ -21,6 +22,7 @@ export function resolveType(scores: Map<CommitType, number>): { type: CommitType
   const secondScore = sorted[1]?.[1] ?? 0;
 
   if (topScore - secondScore < 0.1) {
+    // Near ties are resolved by fixed priority for deterministic output.
     const candidates = sorted.filter(([, score]) => topScore - score < 0.1).map(([type]) => type);
     const winner = TYPE_PRIORITY.find((type) => candidates.includes(type)) ?? topType;
     return { type: winner, confidence: topScore };

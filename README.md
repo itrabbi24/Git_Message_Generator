@@ -21,6 +21,8 @@ Highlights:
 - Multi-signal scoring from path, diff content, and metadata.
 - Supports `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`.
 - Optional multi-line commit body with per-file context.
+- Upgrade reference for maintainers: [`docs/UPGRADE_PLAYBOOK.md`](./docs/UPGRADE_PLAYBOOK.md)
+
 
 ## Usage
 
@@ -37,11 +39,14 @@ Highlights:
 | `commitGen.maxHeaderLength` | number | `72` | Maximum commit header length |
 | `commitGen.maxAnalyzedLinesPerFile` | number | `1200` | Per-file diff line cap kept in memory for analysis |
 | `commitGen.maxContextsPerFile` | number | `12` | Max extracted contexts (function/class names) per file |
+| `commitGen.bodyMaxLines` | number | `12` | Max lines in generated commit body |
+| `commitGen.bodyMaxContextsPerFile` | number | `2` | Max contexts listed for each file in body |
 | `commitGen.scopeMapping` | object | `{}` | Path prefix to scope mapping |
 | `commitGen.typeOverrides` | object | `{}` | Force commit type for matching prefixes |
 | `commitGen.showConfidence` | boolean | `true` | Show confidence notification |
 | `commitGen.includeWorkingTreeWhenNoStaged` | boolean | `true` | Fallback to unstaged changes |
 | `commitGen.includeBody` | boolean | `true` | Include multi-line body |
+| `commitGen.debugTelemetry` | boolean | `false` | Emit local analysis metrics to `CommitGen` Output channel |
 
 Example:
 
@@ -52,9 +57,40 @@ Example:
   },
   "commitGen.typeOverrides": {
     "scripts/deploy/": "ci"
-  }
+  },
+  "commitGen.bodyMaxLines": 10,
+  "commitGen.debugTelemetry": true
 }
 ```
+
+## Scoring Model
+
+Signals are combined from three sources:
+- File path classification (`filepath`)
+- Diff-content heuristics (`diff_content`)
+- Git metadata (`metadata`)
+
+Each signal contributes a weight from `0` to `1`, then scores are combined probabilistically:
+- Combined score formula: `1 - (1 - current) * (1 - weight)`
+- Tie-breaks use commit type priority from `src/utils/patterns.ts`.
+
+## Known Edge Cases
+
+- Large mixed commits may still produce generic summaries.
+- Binary-only changes rely on path/metadata, not content.
+- Low-confidence outputs should be reviewed before commit.
+- Rename similarity below 50% is treated as "remove old and add new".
+
+## Examples By Type
+
+- `feat(auth): add createAccount`
+- `fix(api): guard token response`
+- `docs: update installation guide`
+- `perf(ui): memoize list rendering`
+- `refactor(core): remove legacy.ts and add new-core.ts`
+- `build(deps): update dependencies`
+- `ci: update release workflow`
+- `chore: update repo settings`
 
 ## Development
 

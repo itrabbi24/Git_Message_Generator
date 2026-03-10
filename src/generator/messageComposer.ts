@@ -105,6 +105,12 @@ function unique<T>(values: T[]): T[] {
   return [...new Set(values)];
 }
 
+function topLevelArea(filePath: string): string {
+  const normalized = filePath.replace(/\\/g, "/");
+  const parts = normalized.split("/");
+  return parts.length > 1 ? parts[0] : "root";
+}
+
 export function composeDescription(files: AnalyzedFile[], commitType: CommitType, scope: string | null): string {
   const ranked = [...files].sort((a, b) => significance(b) - significance(a));
 
@@ -126,7 +132,7 @@ export function composeDescription(files: AnalyzedFile[], commitType: CommitType
       if (sim >= 50) {
         return `rename and update ${fromName} to ${toName}`;
       }
-      // <50% similarity: treat as delete+add, fall through to normal description
+      return `remove ${fromName} and add ${toName}`;
     }
 
     const context = compactContext(file.functionContexts[0] ?? "");
@@ -167,22 +173,46 @@ export function composeDescription(files: AnalyzedFile[], commitType: CommitType
     return `${verb} multiple modules`;
   }
 
+  if (!scope && files.length >= 4) {
+    const areas = unique(files.map((file) => topLevelArea(file.path)));
+    if (areas.length > 1) {
+      return `${verb} core modules`;
+    }
+  }
+
   return `${verb} ${files.length} changed files`;
 }
 
-export function composeBody(files: AnalyzedFile[], commitType: CommitType): string {
+export interface ComposeBodyOptions {
+  maxLines?: number;
+  maxContextsPerFile?: number;
+}
+
+export function composeBody(files: AnalyzedFile[], commitType: CommitType, options: ComposeBodyOptions = {}): string {
+  const maxLines = Math.max(3, options.maxLines ?? 12);
+  const maxContextsPerFile = Math.max(1, options.maxContextsPerFile ?? 2);
   const lines: string[] = [];
 
   for (const file of files) {
+    if (lines.length >= maxLines) {
+      break;
+    }
     const verb = statusVerb(file.status, commitType, files.length);
     const name = basename(file.path);
-    const contexts = file.functionContexts.map(compactContext).filter(Boolean);
+    // Keep body concise: dedupe noisy contexts and keep only top N tokens per file.
+    const contexts = unique(file.functionContexts.map(compactContext).filter(Boolean)).slice(0, maxContextsPerFile);
 
     if (contexts.length > 0) {
       lines.push(`- ${verb} ${name}: ${contexts.join(", ")}`);
     } else {
       lines.push(`- ${verb} ${name}`);
     }
+  }
+
+  const omitted = files.length - lines.length;
+  if (omitted > 0) {
+    // Preserve awareness of additional files without flooding commit body.
+    lines.push(`- and ${omitted} more file${omitted === 1 ? "" : "s"}`);
   }
 
   return lines.join("\n");

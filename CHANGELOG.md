@@ -10,11 +10,22 @@ All notable changes to this project are documented in this file.
 - New performance settings:
   - `commitGen.maxAnalyzedLinesPerFile`
   - `commitGen.maxContextsPerFile`
+- New body controls:
+  - `commitGen.bodyMaxLines`
+  - `commitGen.bodyMaxContextsPerFile`
+- Optional local telemetry setting:
+  - `commitGen.debugTelemetry`
+- New maintainer guide:
+  - `docs/UPGRADE_PLAYBOOK.md`
 
 ### Changed
 - Scope detection logic extracted into `scopeCore` for better testability.
 - `STATUS_VERBS` deduplicated into a single shared utility.
 - Diff parsing now caps stored per-file lines and contexts while preserving true addition/deletion totals.
+- Scope conflict handling now uses weighted path inference and avoids ambiguous comma scopes.
+- Low-similarity renames now use explicit remove/add wording.
+- Commit body generation now deduplicates contexts and caps verbose output.
+- Configuration parsing now sanitizes invalid mapping and type override entries.
 
 ### Removed
 - Tracked `.vsix` release artifacts from repository.

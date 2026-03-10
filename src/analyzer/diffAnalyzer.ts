@@ -111,6 +111,7 @@ function extractAddedRemovedLines(
       const content = change.content ?? "";
       if (content.startsWith("+")) {
         additions += 1;
+        // Keep full counters even when retained lines are capped for memory safety.
         if (captured < maxLinesPerFile) {
           addedLines.push(content.slice(1));
           captured += 1;
@@ -235,6 +236,7 @@ export function parseFiles(rawDiff: string, options: Partial<ParseDiffOptions> =
     signals.push(...toSignals(allPrefixedLines, REFACTOR_PATTERNS, "refactor", 0.35, "refactor pattern matched"));
     signals.push(...toSignals(addedPrefixed, TEST_PATTERNS, "test", 0.45, "test pattern matched"));
     signals.push(...toSignals(addedPrefixed, SECURITY_PATTERNS, "fix", 0.45, "security hardening pattern matched"));
+    // Dependency-file inspection uses a smaller sample to avoid over-processing huge lockfile diffs.
     signals.push(...dependencySignals(identity.path, addedLines.slice(0, 100), removedLines.slice(0, 100)));
 
     const delta = Math.abs(additions - deletions);

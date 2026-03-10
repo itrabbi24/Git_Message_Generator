@@ -24,3 +24,13 @@ test("detectScopeFromPaths picks dominant monorepo scope", () => {
   ]);
   assert.equal(scope, "auth");
 });
+
+test("detectScopeFromPaths returns null for evenly mixed scopes", () => {
+  const scope = detectScopeFromPaths([
+    "src/auth/login.ts",
+    "src/services/payments.ts",
+    "src/hooks/useSearch.ts",
+    "src/routes/profile.ts"
+  ]);
+  assert.equal(scope, null);
+});

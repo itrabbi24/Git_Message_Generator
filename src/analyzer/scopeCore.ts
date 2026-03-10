@@ -16,7 +16,7 @@ function collectScopeCounts(filePaths: string[], extractor: (filePath: string) =
   return counts;
 }
 
-function chooseScope(counts: Map<string, number>): string | null {
+function chooseScope(counts: Map<string, number>, allowMultiScope = true): string | null {
   if (counts.size === 0) {
     return null;
   }
@@ -31,10 +31,16 @@ function chooseScope(counts: Map<string, number>): string | null {
   if (topCount / total >= 0.6) {
     return topScope;
   }
-  if (counts.size <= 3) {
+  if (allowMultiScope && counts.size <= 3) {
     return sorted.map(([scope]) => scope).sort().join(",");
   }
   return null;
+}
+
+function mergeCounts(target: Map<string, number>, source: Map<string, number>, weight = 1): void {
+  for (const [scope, count] of source.entries()) {
+    target.set(scope, (target.get(scope) ?? 0) + count * weight);
+  }
 }
 
 export interface ScopeDetectionOptions {
@@ -62,11 +68,15 @@ export function detectScopeFromPaths(filePaths: string[], options: ScopeDetectio
   const normalizedPaths = filePaths.map(normalizePath);
 
   for (const [prefix, scope] of Object.entries(scopeMapping)) {
+    // Explicit user mapping always wins to keep behavior predictable.
     if (normalizedPaths.some((filePath) => filePath.startsWith(normalizePath(prefix)))) {
       return scope.toLowerCase();
     }
   }
 
+  const weightedCounts = new Map<string, number>();
+
+  // Monorepo package/app scopes are usually strongest ownership signals.
   for (const root of ["packages/", "apps/", "libs/", "modules/", "services/"]) {
     const counts = collectScopeCounts(normalizedPaths, (filePath) => {
       if (!filePath.startsWith(root)) {
@@ -75,10 +85,7 @@ export function detectScopeFromPaths(filePaths: string[], options: ScopeDetectio
       const scope = filePath.slice(root.length).split("/")[0];
       return scope ? scope.toLowerCase() : null;
     });
-    const selected = chooseScope(counts);
-    if (selected) {
-      return selected;
-    }
+    mergeCounts(weightedCounts, counts, 2);
   }
 
   const srcCounts = collectScopeCounts(normalizedPaths, (filePath) => {
@@ -88,27 +95,30 @@ export function detectScopeFromPaths(filePaths: string[], options: ScopeDetectio
     const scope = filePath.slice("src/".length).split("/")[0];
     return scope ? scope.toLowerCase() : null;
   });
-  const srcScope = chooseScope(srcCounts);
-  if (srcScope) {
-    return srcScope;
-  }
+  mergeCounts(weightedCounts, srcCounts, 1.5);
 
   const componentCounts = collectScopeCounts(normalizedPaths, (filePath) => {
     const match = filePath.match(/^(?:src\/)?components\/([^/]+)\//);
     return match?.[1] ? match[1].toLowerCase() : null;
   });
-  const componentScope = chooseScope(componentCounts);
-  if (componentScope) {
-    return componentScope;
+  mergeCounts(weightedCounts, componentCounts, 1.5);
+
+  const weightedScope = chooseScope(weightedCounts, false);
+  if (weightedScope) {
+    return weightedScope;
   }
 
+  // Final fallback: meaningful directory names if weighted inference is inconclusive.
+  const meaningfulCounts = new Map<string, number>();
   for (const filePath of normalizedPaths) {
     for (const part of filePath.split("/")) {
       if (MEANINGFUL_DIRS.includes(part.toLowerCase())) {
-        return part.toLowerCase();
+        const scope = part.toLowerCase();
+        meaningfulCounts.set(scope, (meaningfulCounts.get(scope) ?? 0) + 1);
+        break;
       }
     }
   }
 
-  return null;
+  return chooseScope(meaningfulCounts, false);
 }

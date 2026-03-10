@@ -11,6 +11,15 @@ import { getChangeContext } from "./git/gitService";
 import { combineScores, resolveType } from "./scorer/commitScorer";
 import { AnalyzedFile, FileStatus, GenerationResult, MetadataResult } from "./types";
 
+let telemetryChannel: vscode.OutputChannel | undefined;
+
+function getTelemetryChannel(): vscode.OutputChannel {
+  if (!telemetryChannel) {
+    telemetryChannel = vscode.window.createOutputChannel("CommitGen");
+  }
+  return telemetryChannel;
+}
+
 function normalizeRepoRelative(rootPath: string, filePath: vscode.Uri): string {
   return path.relative(rootPath, filePath.fsPath).replace(/\\/g, "/");
 }
@@ -59,6 +68,7 @@ function mergeSignals(files: AnalyzedFile[], metadata: MetadataResult): Generati
   );
 
   if (!scope && files.length === 1 && !files[0].isBinary) {
+    // Single-file fallback keeps headers specific even when directory scope is absent.
     const filename = path.posix.basename(files[0].path);
     const dot = filename.lastIndexOf(".");
     scope = dot > 0 ? filename.slice(0, dot) : filename;
@@ -69,7 +79,10 @@ function mergeSignals(files: AnalyzedFile[], metadata: MetadataResult): Generati
 
   let body: string | undefined;
   if (config.includeBody && files.length > 0) {
-    body = composeBody(files, resolved.type);
+    body = composeBody(files, resolved.type, {
+      maxLines: config.bodyMaxLines,
+      maxContextsPerFile: config.bodyMaxContextsPerFile
+    });
   }
 
   const message = buildMessage(resolved.type, scope, description, config.maxHeaderLength, body);
@@ -85,6 +98,7 @@ function mergeSignals(files: AnalyzedFile[], metadata: MetadataResult): Generati
 
 async function generateCommitMessage(): Promise<void> {
   const config = getCommitGenConfig();
+  const telemetryStart = Date.now();
   const changeContext = await getChangeContext(config.includeWorkingTreeWhenNoStaged);
   if (!changeContext) {
     vscode.window.showErrorMessage("Git repository not available.");
@@ -102,10 +116,12 @@ async function generateCommitMessage(): Promise<void> {
     return;
   }
 
+  const parseStart = Date.now();
   const parsedFiles = parseFiles(changeContext.rawDiff, {
     maxLinesPerFile: config.maxAnalyzedLinesPerFile,
     maxContextsPerFile: config.maxContextsPerFile
   });
+  const parseMs = Date.now() - parseStart;
   const fileMap = new Map(parsedFiles.map((file) => [file.path, file] as const));
 
   const analyzedFiles: AnalyzedFile[] = changeContext.changes.map((change) => {
@@ -132,6 +148,7 @@ async function generateCommitMessage(): Promise<void> {
         removedLines: []
       };
 
+    // Reconcile Git API change list with parsed diff, with safe defaults if parser lacks entry.
     const pathSignal = classifyByPath(relativePath);
     const signals = [...existing.signals];
     if (pathSignal) {
@@ -150,6 +167,28 @@ async function generateCommitMessage(): Promise<void> {
   const metadata = analyzeMetadata(changeContext.changes, analyzedFiles);
   const result = mergeSignals(analyzedFiles, metadata);
   changeContext.repository.inputBox.value = result.message;
+
+  if (config.debugTelemetry) {
+    const trackedDiffLines = analyzedFiles.reduce(
+      (sum, file) => sum + file.addedLines.length + file.removedLines.length,
+      0
+    );
+    const totalDiffLines = analyzedFiles.reduce((sum, file) => sum + file.additions + file.deletions, 0);
+    const truncatedFiles = analyzedFiles.filter(
+      (file) => file.additions + file.deletions > file.addedLines.length + file.removedLines.length
+    ).length;
+
+    // Output channel telemetry stays local and helps tune caps for large repositories.
+    const channel = getTelemetryChannel();
+    channel.appendLine(
+      `[CommitGen] source=${changeContext.source} files=${analyzedFiles.length} parseMs=${parseMs} totalMs=${Date.now() - telemetryStart}`
+    );
+    channel.appendLine(
+      `[CommitGen] trackedLines=${trackedDiffLines} totalLines=${totalDiffLines} truncatedFiles=${truncatedFiles} confidence=${Math.round(
+        result.confidence * 100
+      )}% type=${result.type} scope=${result.scope ?? "none"}`
+    );
+  }
 
   if (config.showConfidence) {
     const percent = Math.round(result.confidence * 100);
@@ -181,4 +220,7 @@ export function activate(context: vscode.ExtensionContext): void {
   );
 }
 
-export function deactivate(): void {}
+export function deactivate(): void {
+  telemetryChannel?.dispose();
+  telemetryChannel = undefined;
+}

@@ -78,6 +78,18 @@
           "minimum": 1,
           "description": "Maximum number of extracted function/class contexts per file."
         },
+        "commitGen.bodyMaxLines": {
+          "type": "integer",
+          "default": 12,
+          "minimum": 3,
+          "description": "Maximum number of lines to include in generated commit body."
+        },
+        "commitGen.bodyMaxContextsPerFile": {
+          "type": "integer",
+          "default": 2,
+          "minimum": 1,
+          "description": "Maximum contexts (function/class names) to include per file in commit body."
+        },
         "commitGen.scopeMapping": {
           "type": "object",
           "default": {},
@@ -102,6 +114,11 @@
           "type": "boolean",
           "default": true,
           "description": "Include a detailed multi-line body listing all changed files and their specific contexts."
+        },
+        "commitGen.debugTelemetry": {
+          "type": "boolean",
+          "default": false,
+          "description": "Emit local analysis metrics (timings and line caps) to the CommitGen Output channel."
         }
       }
     }
