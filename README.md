@@ -2,120 +2,140 @@
 
 # Git Message Generator By ARG RABBI
 
-Automatic conventional commit messages inside VS Code.
+**Automatic conventional commit messages inside VS Code.**
 
-[![Version](https://img.shields.io/badge/version-v0.1.1-blue?style=flat-square)](./CHANGELOG.md)
-[![VS Code Marketplace](https://img.shields.io/visual-studio-marketplace/v/argrabbi.git-message-generator-by-arg-rabbi?label=Marketplace&color=0078d7&style=flat-square)](https://marketplace.visualstudio.com/items?itemName=ARGRABBI.git-message-generator-by-arg-rabbi)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](./LICENSE)
+[![version](https://img.shields.io/badge/version-v0.1.1-0078D7?style=flat-square)](./CHANGELOG.md)
+[![Marketplace](https://img.shields.io/visual-studio-marketplace/v/argrabbi.git-message-generator-by-arg-rabbi?label=Marketplace&style=flat-square&color=0078D7)](https://marketplace.visualstudio.com/items?itemName=ARGRABBI.git-message-generator-by-arg-rabbi)
+[![downloads](https://img.shields.io/visual-studio-marketplace/d/argrabbi.git-message-generator-by-arg-rabbi?label=downloads&style=flat-square&color=44CC11)](https://marketplace.visualstudio.com/items?itemName=ARGRABBI.git-message-generator-by-arg-rabbi)
+[![rating](https://img.shields.io/visual-studio-marketplace/r/argrabbi.git-message-generator-by-arg-rabbi?label=rating&style=flat-square&color=F0C040)](https://marketplace.visualstudio.com/items?itemName=ARGRABBI.git-message-generator-by-arg-rabbi)
+[![License](https://img.shields.io/badge/License-MIT-0078D7?style=flat-square)](./LICENSE)
+[![GitHub](https://img.shields.io/badge/GitHub-itrabbi24-24292e?style=flat-square&logo=github)](https://github.com/itrabbi24)
+
+Developed by **ARG RABBI**  
+GitHub: [itrabbi24](https://github.com/itrabbi24) · Portfolio: [itrabbi24.github.io](https://itrabbi24.github.io/)
 
 [Install from Marketplace](https://marketplace.visualstudio.com/items?itemName=ARGRABBI.git-message-generator-by-arg-rabbi)
 
 </div>
 
-## Overview
+---
 
-This extension analyzes your Git diff and generates a Conventional Commits message in the Source Control input box.
+## Tutorial
 
-Highlights:
-- Fully local: no network calls, no API keys.
-- Multi-signal scoring from path, diff content, and metadata.
-- Adaptive analysis profile support (`balanced`, `frontend`, `backend`, `infra`).
-- Auto profile detection from current change set (when profile is `balanced`).
-- Confidence-gated wording (high=precise, medium=neutral, low=conservative).
-- Supports `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`.
-- Message style profiles (`concise`, `balanced`, `verbose`).
-- Optional multi-line commit body with per-file context.
-- Upgrade reference for maintainers: [`docs/UPGRADE_PLAYBOOK.md`](./docs/UPGRADE_PLAYBOOK.md)
+<img src="./assets/tutorial.gif" alt="Git Message Generator tutorial" width="100%" />
 
+---
 
-## Usage
+## User Guide
 
-1. Open a Git repository in VS Code.
-2. Stage files (or keep unstaged files if fallback is enabled).
-3. Open Source Control.
-4. Run `Generate Git Message`.
-5. Review and commit.
+### Why This Extension
 
-Optional debugging command:
-- Run `Explain Last Generated Git Message` to inspect top scoring signals and confidence drivers.
+You stage files, click one command, and get a conventional commit message instantly.
 
-## Configuration
+- No AI/API key required
+- Works fully local
+- Multi-signal analysis (path + diff + metadata)
+- Confidence-aware message generation (high confidence = precise wording)
+- Smart scope detection (`auth`, `deps`, etc.)
 
-| Setting | Type | Default | Description |
-|---|---|---|---|
-| `commitGen.maxHeaderLength` | number | `72` | Maximum commit header length |
-| `commitGen.maxAnalyzedLinesPerFile` | number | `1200` | Per-file diff line cap kept in memory for analysis |
-| `commitGen.maxContextsPerFile` | number | `12` | Max extracted contexts (function/class names) per file |
-| `commitGen.maxRawDiffChars` | number | `400000` | Maximum raw diff size before fallback to path+metadata-only analysis |
-| `commitGen.bodyMaxLines` | number | `12` | Max lines in generated commit body |
-| `commitGen.bodyMaxContextsPerFile` | number | `2` | Max contexts listed for each file in body |
-| `commitGen.scopeMapping` | object | `{}` | Path prefix to scope mapping |
-| `commitGen.typeOverrides` | object | `{}` | Force commit type for matching prefixes |
-| `commitGen.profile` | string | `balanced` | Adaptive scoring profile: `balanced`, `frontend`, `backend`, `infra` |
-| `commitGen.autoDetectProfile` | boolean | `true` | Auto-detect profile from changed file patterns when profile is `balanced` |
-| `commitGen.messageStyle` | string | `balanced` | Message verbosity profile: `concise`, `balanced`, `verbose` |
-| `commitGen.showConfidence` | boolean | `true` | Show confidence notification |
-| `commitGen.includeWorkingTreeWhenNoStaged` | boolean | `true` | Fallback to unstaged changes |
-| `commitGen.includeBody` | boolean | `true` | Include multi-line body |
-| `commitGen.debugTelemetry` | boolean | `false` | Emit local analysis metrics to `CommitGen` Output channel |
+### Main Features
 
-Example:
+- Conventional commit types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`
+- Rename-aware wording
+- Dependency-specific messages (`build(deps): ...`)
+- Optional multi-line commit body with compacted context
+- Large-diff safety fallback for stable performance
+- Explain command: inspect why a message was generated
+
+### Install
+
+1. Open VS Code Extensions (`Ctrl+Shift+X`)
+2. Search: **Git Message Generator By ARG RABBI**
+3. Click Install
+
+Or install directly from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=ARGRABBI.git-message-generator-by-arg-rabbi).
+
+### Quick Usage
+
+1. Open a Git repository in VS Code
+2. Stage your files (or keep unstaged if fallback enabled)
+3. Open Source Control
+4. Run `Generate Git Message`
+5. Review and commit
+
+Optional debug command:
+- `Explain Last Generated Git Message`
+
+### Example Outputs
+
+```text
+feat(auth): add createAccount
+fix(api): guard token response
+build(deps): update dependencies
+refactor(core): remove legacyEngine.ts and add newEngine.ts
+ci: update ci.yml, release.yml
+```
+
+### Configuration (Practical)
+
+| Setting | Default | What it does |
+|---|---|---|
+| `commitGen.maxHeaderLength` | `72` | Max header length |
+| `commitGen.maxAnalyzedLinesPerFile` | `1200` | Per-file diff line cap |
+| `commitGen.maxContextsPerFile` | `12` | Context extraction cap |
+| `commitGen.maxRawDiffChars` | `400000` | Huge diff fallback threshold |
+| `commitGen.includeBody` | `true` | Include message body |
+| `commitGen.bodyMaxLines` | `12` | Max body lines |
+| `commitGen.bodyMaxContextsPerFile` | `2` | Max contexts per file in body |
+| `commitGen.profile` | `balanced` | Scoring profile (`balanced/frontend/backend/infra`) |
+| `commitGen.autoDetectProfile` | `true` | Auto detect profile when balanced |
+| `commitGen.messageStyle` | `balanced` | Message verbosity (`concise/balanced/verbose`) |
+| `commitGen.showConfidence` | `true` | Confidence notification |
+| `commitGen.includeWorkingTreeWhenNoStaged` | `true` | Use unstaged if no staged changes |
+| `commitGen.debugTelemetry` | `false` | Output timing/analysis metrics |
+
+### Suggested Config (Balanced Real-World)
 
 ```json
 {
-  "commitGen.scopeMapping": {
-    "src/payments/": "payments"
-  },
-  "commitGen.typeOverrides": {
-    "scripts/deploy/": "ci"
-  },
-  "commitGen.profile": "backend",
+  "commitGen.profile": "balanced",
   "commitGen.autoDetectProfile": true,
-  "commitGen.messageStyle": "verbose",
-  "commitGen.maxRawDiffChars": 400000,
+  "commitGen.messageStyle": "balanced",
+  "commitGen.includeBody": true,
   "commitGen.bodyMaxLines": 10,
-  "commitGen.debugTelemetry": true
+  "commitGen.maxHeaderLength": 72
 }
 ```
 
-## Scoring Model
+### Troubleshooting
 
-Signals are combined from three sources:
-- File path classification (`filepath`)
-- Diff-content heuristics (`diff_content`)
-- Git metadata (`metadata`)
+- No message generated:
+  - Ensure repo is Git-initialized
+  - Stage files or enable unstaged fallback
+- Message too generic:
+  - Split commit into smaller logical changes
+  - Use `messageStyle: "verbose"`
+- Large commit performance:
+  - Adjust `maxAnalyzedLinesPerFile`
+  - Keep `maxRawDiffChars` fallback enabled
 
-Each signal contributes a weight from `0` to `1`, then scores are combined probabilistically:
-- Combined score formula: `1 - (1 - current) * (1 - weight)`
-- Tie-breaks use commit type priority from `src/utils/patterns.ts`.
-- Profile-aware multipliers are applied before score fusion.
-- When `profile=balanced`, profile can be auto-inferred from file patterns.
+---
 
-Message quality by confidence:
-- `>= 0.75`: specific wording with context/function names
-- `0.50 - 0.74`: neutral but still targeted wording
-- `< 0.50`: conservative summaries to avoid over-claiming
+## Developer Notes
 
-## Known Edge Cases
+### Architecture Summary
 
-- Large mixed commits may still produce generic summaries.
-- Very large diffs use a performance fallback (path + metadata signals only).
-- Binary-only changes rely on path/metadata, not content.
-- Low-confidence outputs should be reviewed before commit.
-- Rename similarity below 50% is treated as "remove old and add new".
+Pipeline:
+1. `gitService.ts` collects changes
+2. `analysisPipeline.ts` builds analyzed file set
+3. scoring (`commitScorer.ts` + profile multipliers)
+4. message composition (`messageComposer.ts`)
+5. `extension.ts` orchestration + UX + explain command
 
-## Examples By Type
+Maintainer reference:
+- [`docs/UPGRADE_PLAYBOOK.md`](./docs/UPGRADE_PLAYBOOK.md)
 
-- `feat(auth): add createAccount`
-- `fix(api): guard token response`
-- `docs: update installation guide`
-- `perf(ui): memoize list rendering`
-- `refactor(core): remove legacy.ts and add new-core.ts`
-- `build(deps): update dependencies`
-- `ci: update release workflow`
-- `chore: update repo settings`
-
-## Development
+### Commands
 
 ```bash
 npm install
@@ -123,42 +143,51 @@ npm run lint
 npm run typecheck
 npm run test
 npm run build
-npm run package:check
 npm run benchmark
-npm run release:plan
+npm run package:check
 ```
 
-Run extension locally:
-- Open project in VS Code.
-- Press `F5` to launch Extension Development Host.
+### Current Validation Quality
 
-## CI
-
-GitHub Actions workflow validates:
-- lint
-- typecheck
-- build
-- tests
-- package check (`vsce package`)
-
-Tagged releases (`v*.*.*`) automatically create a GitHub Release with VSIX artifact.
-Manual `Release Plan` workflow computes recommended semantic version bump from commit history.
-
-## Project Structure
+- Unit + golden regression tests are included
+- Integration-style pure generation test is included
+- Current benchmark script output (example from local run):
 
 ```text
-src/
-  analyzer/
-  config/
-  generator/
-  git/
-  scorer/
-  utils/
-  extension.ts
-test/
-  *.test.ts
+small  files=5  lines=200   parseMs=37.28
+medium files=20 lines=1600  parseMs=50.34
+large  files=40 lines=6400  parseMs=201.88
 ```
+
+### Release Automation
+
+- CI validation workflow: lint + typecheck + test + build + package check
+- Tag release workflow (`v*.*.*`) publishes VSIX artifact
+- Release planning workflow + script:
+  - `npm run release:plan`
+  - `.github/workflows/release-plan.yml`
+
+---
+
+## Contributing
+
+- [Issues](https://github.com/itrabbi24/Git_Message_Generator/issues)
+- [Pull Requests](https://github.com/itrabbi24/Git_Message_Generator/pulls)
+
+Please follow:
+- [CONTRIBUTING.md](./CONTRIBUTING.md)
+- [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md)
+
+---
 
 ## License
 
-MIT
+MIT — [LICENSE](./LICENSE)
+
+---
+
+<div align="center">
+
+Built with care by **ARG RABBI**
+
+</div>
