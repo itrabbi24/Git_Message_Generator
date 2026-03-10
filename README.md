@@ -21,23 +21,24 @@ Stop writing commit messages from scratch. This extension analyzes your staged G
 
 ## How It Works
 
-The extension runs a weighted, three-layer signal pipeline on every change — no AI, no internet, no API keys.
+The extension runs a weighted, four-layer signal pipeline on every change — no AI, no internet, no API keys.
 
 ```
 Your Git changes
       │
       ▼
 ┌─────────────────────────────────────┐
-│  Layer 1 · File Path Classification │  src/auth/login.ts → feat
-│  Layer 2 · Diff Content Analysis    │  null-check added → fix
-│  Layer 3 · Git Metadata Signals     │  all files added → feat
+│  Layer 1 · Path Classification      │  Infers type from folder/extension
+│  Layer 2 · Identity Extraction      │  Finds function/class names in diffs
+│  Layer 3 · Semantic Diff Analysis   │  Detects null guards, exports, and logic
+│  Layer 4 · Git Metadata Signals     │  Weights based on additions/deletions
 └─────────────────────────────────────┘
       │
       ▼
- Weighted score → Conventional commit type
+  Weighted Scoring Model
       │
       ▼
- feat(auth): add login validation  ← placed in your input box
+feat(auth): implement validatePassword  ← placed in your input box
 ```
 
 Signals are combined using a probabilistic scoring formula. The highest-confidence type wins and a human-readable message is generated in under a second.
@@ -210,12 +211,16 @@ You can rebind this in **File → Preferences → Keyboard Shortcuts** by search
 
 ---
 
-## What's New in v0.0.4
+## What's New in v0.1.0
 
-- **Professional Accuracy**: Now extracts the actual function and variable names you modified (identifies JS, TS, Python, and Go identifiers).
-- **Nuanced Intelligence**: Content-aware verbs like **expose** (new exports), **guard** (null checks), **modernize** (const/var updates), and **validate**.
-- **Large Repository Optimization**: Safe-mode analysis for massive commits and large files (throttles scanning after 300 lines).
-- **Dynamic Scoping**: Automatically infers scope from filenames if directory-based scope is unavailable.
+- **Detailed Multi-line Body**: Generates a comprehensive bulleted list of all changed files and their specific contexts (e.g., function names) in the commit body.
+- **Unlimited Deep Analysis**: Removed all line and file-size limits. Analyzes 100% of your changes for maximum accuracy.
+- **Professional Accuracy**: Deep identity extraction for JS, TS, Python, and Go identifiers.
+- **Nuanced Intelligence**: Semantic verb selection: `expose`, `guard`, `modernize`, and `validate`.
+- **Dynamic Scoping**: Automatically infers scope from filenames for single-file changes.
+
+## What's New in v0.0.4
+- **Optimized** logic for human-like message generation.
 
 ## What's New in v0.0.3
 
