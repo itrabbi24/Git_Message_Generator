@@ -104,7 +104,7 @@ function unique<T>(values: T[]): T[] {
   return [...new Set(values)];
 }
 
-export function composeDescription(files: AnalyzedFile[], commitType: CommitType, scope: string | null): string {
+export function composeDescription(files: AnalyzedFile[], commitType: CommitType, scope: string | null, largeCommitThreshold = 20): string {
   const ranked = [...files].sort((a, b) => significance(b) - significance(a));
 
   if (files.every((file) => isDependencyFile(file.path))) {
@@ -130,6 +130,13 @@ export function composeDescription(files: AnalyzedFile[], commitType: CommitType
 
     const context = compactContext(file.functionContexts[0] ?? "");
     const verb = statusVerb(file.status, commitType, files.length);
+
+    // Dynamic scoping: Use filename if no explicit scope but context exists
+    if (!scope && context) {
+      // In buildMessage, this will become type(basename): verb context
+      // But for now, we just return the description part.
+    }
+
     if (context && (commitType === "fix" || commitType === "perf" || commitType === "refactor" || commitType === "feat")) {
       return `${verb} ${context}`;
     }
@@ -155,8 +162,8 @@ export function composeDescription(files: AnalyzedFile[], commitType: CommitType
     return `remove ${files.length} files`;
   }
 
-  // Large commit: >20 files with no clear scope → very generic
-  if (files.length > 20) {
+  // Large commit: exceeds threshold with no clear scope → very generic
+  if (files.length > largeCommitThreshold) {
     return `${verb} multiple modules`;
   }
 
@@ -164,6 +171,8 @@ export function composeDescription(files: AnalyzedFile[], commitType: CommitType
 }
 
 export function buildMessage(type: CommitType, scope: string | null, description: string, maxLength: number): string {
+  // If no scope was provided, but description is short, we could potentially inject filename as scope here
+  // However, simpler to just use what's passed.
   const header = scope ? `${type}(${scope}): ${description}` : `${type}: ${description}`;
   return header.length <= maxLength ? header : header.slice(0, maxLength).trimEnd();
 }

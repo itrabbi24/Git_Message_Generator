@@ -14,6 +14,17 @@ import {
   isSourceCodeFile
 } from "../utils/patterns";
 
+const MAX_ANALYZE_LINES = 300; // Only scan first 300 lines for deep patterns
+const MAX_FILE_SIZE_BYTES = 100 * 1024; // 100KB limit for deep analysis
+
+const IDENTIFIER_PATTERNS = [
+  /^(?:export\s+)?(?:async\s+)?function\s+([a-zA-Z0-9_$]+)/, // JS/TS function
+  /^(?:export\s+)?class\s+([a-zA-Z0-9_$]+)/,           // JS/TS class
+  /^(?:export\s+)?const\s+([a-zA-Z0-9_$]+)\s*=\s*(?:async\s*)?\(/, // Arrow function
+  /^def\s+([a-zA-Z0-9_$]+)\(/,                        // Python function
+  /^func\s+(?:\([^)]+\)\s+)?([a-zA-Z0-9_$]+)\(/        // Go function
+];
+
 type DiffFile = ReturnType<typeof parseDiff>[number];
 
 function normalizePath(filePath: string): string {
@@ -25,10 +36,30 @@ function toSignals(lines: string[], patterns: RegExp[], type: Signal["type"], we
   return matched.map(() => ({ type, source: "diff_content", weight, reason }));
 }
 
-function extractContexts(file: DiffFile): string[] {
-  return (file.chunks ?? [])
-    .map((chunk) => chunk.content.match(/@@ .+ @@\s*(.+)/)?.[1]?.trim())
-    .filter((value): value is string => Boolean(value));
+function extractContexts(file: DiffFile, addedLines: string[]): string[] {
+  const contexts = new Set<string>();
+
+  // Layer 1: Extract from @@ headers (Git's built-in heuristic)
+  for (const chunk of (file.chunks ?? []).slice(0, 10)) {
+    const match = chunk.content.match(/@@ .+ @@\s*(.+)/);
+    if (match?.[1]) {
+      contexts.add(match[1].trim());
+    }
+  }
+
+  // Layer 2: Extract specific identifiers from added lines
+  for (const line of addedLines.slice(0, 100)) {
+    const trimmed = line.trim();
+    for (const pattern of IDENTIFIER_PATTERNS) {
+      const match = trimmed.match(pattern);
+      if (match?.[1]) {
+        contexts.add(match[1]);
+        break;
+      }
+    }
+  }
+
+  return [...contexts];
 }
 
 function normalizeDiffPath(value?: string): string {
@@ -169,13 +200,17 @@ export function parseFiles(rawDiff: string): AnalyzedFile[] {
     const allPrefixedLines = addedPrefixed.concat(removedPrefixed);
     const signals: Signal[] = [];
 
-    signals.push(...toSignals(addedPrefixed, FIX_PATTERNS, "fix", 0.3, "fix pattern matched"));
-    signals.push(...toSignals(addedPrefixed, FEAT_PATTERNS, "feat", 0.25, "feature pattern matched"));
-    signals.push(...toSignals(addedPrefixed, PERF_PATTERNS, "perf", 0.35, "performance pattern matched"));
-    signals.push(...toSignals(allPrefixedLines, REFACTOR_PATTERNS, "refactor", 0.35, "refactor pattern matched"));
-    signals.push(...toSignals(addedPrefixed, TEST_PATTERNS, "test", 0.45, "test pattern matched"));
-    signals.push(...toSignals(addedPrefixed, SECURITY_PATTERNS, "fix", 0.45, "security hardening pattern matched"));
-    signals.push(...dependencySignals(identity.path, addedLines, removedLines));
+    const isLargeFile = (file.additions ?? 0) + (file.deletions ?? 0) > 1000;
+    const linesToScan = isLargeFile ? addedPrefixed.slice(0, MAX_ANALYZE_LINES) : addedPrefixed;
+    const allLinesToScan = isLargeFile ? allPrefixedLines.slice(0, MAX_ANALYZE_LINES) : allPrefixedLines;
+
+    signals.push(...toSignals(linesToScan, FIX_PATTERNS, "fix", 0.3, "fix pattern matched"));
+    signals.push(...toSignals(linesToScan, FEAT_PATTERNS, "feat", 0.25, "feature pattern matched"));
+    signals.push(...toSignals(linesToScan, PERF_PATTERNS, "perf", 0.35, "performance pattern matched"));
+    signals.push(...toSignals(allLinesToScan, REFACTOR_PATTERNS, "refactor", 0.35, "refactor pattern matched"));
+    signals.push(...toSignals(linesToScan, TEST_PATTERNS, "test", 0.45, "test pattern matched"));
+    signals.push(...toSignals(linesToScan, SECURITY_PATTERNS, "fix", 0.45, "security hardening pattern matched"));
+    signals.push(...dependencySignals(identity.path, addedLines.slice(0, 100), removedLines.slice(0, 100)));
 
     const delta = Math.abs(additions - deletions);
     const total = Math.max(additions, deletions, 1);
@@ -264,7 +299,7 @@ export function parseFiles(rawDiff: string): AnalyzedFile[] {
       additions,
       deletions,
       isBinary: isBinaryFile(identity.path) || ((file.chunks ?? []).length === 0 && addedLines.length + removedLines.length === 0),
-      functionContexts: extractContexts(file),
+      functionContexts: extractContexts(file, addedLines),
       addedLines,
       removedLines,
       renameSimilarity

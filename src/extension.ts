@@ -53,9 +53,17 @@ function mergeSignals(files: AnalyzedFile[], metadata: MetadataResult): Generati
 
   const scores = combineScores(allSignals);
   const resolved = resolveType(scores);
-  const scope = detectScope(files.map((file) => file.path), metadata.isDepsOnly);
+  let scope = detectScope(files.map((file) => file.path), metadata.isDepsOnly);
+
+  // Dynamic scoping for single-file changes: use the filename if no directory scope found
+  if (!scope && files.length === 1 && !files[0].isBinary) {
+    const filename = path.posix.basename(files[0].path);
+    const dot = filename.lastIndexOf(".");
+    scope = dot > 0 ? filename.slice(0, dot) : filename;
+  }
+
   const config = getCommitGenConfig();
-  const description = composeDescription(files, resolved.type, scope);
+  const description = composeDescription(files, resolved.type, scope, config.largeCommitThreshold);
   const message = buildMessage(resolved.type, scope, description, config.maxHeaderLength);
 
   return {
@@ -131,11 +139,21 @@ async function generateCommitMessage(): Promise<void> {
   const result = mergeSignals(analyzedFiles, metadata);
   changeContext.repository.inputBox.value = result.message;
 
-  // Large commit suggestion: >20 files with mixed types
-  if (analyzedFiles.length > 20 && config.showConfidence) {
-    vscode.window.showWarningMessage(
-      `Large commit (${analyzedFiles.length} files) detected. Consider splitting into smaller, focused commits.`
-    );
+  // Large commit advisory: exceeds configured threshold
+  if (config.warnOnLargeCommit && analyzedFiles.length > config.largeCommitThreshold) {
+    vscode.window
+      .showWarningMessage(
+        `Large commit: ${analyzedFiles.length} files staged. Consider splitting into smaller, focused commits for a cleaner history.`,
+        "OK",
+        "Don't warn again"
+      )
+      .then((choice) => {
+        if (choice === "Don't warn again") {
+          vscode.workspace
+            .getConfiguration("commitGen")
+            .update("warnOnLargeCommit", false, vscode.ConfigurationTarget.Global);
+        }
+      });
   }
 
   if (config.showConfidence) {
@@ -170,4 +188,4 @@ export function activate(context: vscode.ExtensionContext): void {
   );
 }
 
-export function deactivate(): void {}
+export function deactivate(): void { }

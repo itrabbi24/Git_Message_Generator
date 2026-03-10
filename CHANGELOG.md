@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.0.4] - 2026-03-10
+
+### Added — Professional Accuracy
+- **Deep Identity Extraction**: Extension now identifies specific function and class names from diff content and hunk headers (JS, TS, Python, and Go).
+- **Nuanced Verbs**: Semantic verb selection based on code intent:
+    - **expose**: New `export` declarations.
+    - **guard**: Null checks (`?.`, `!== null`, etc.).
+    - **modernize**: ES6+ updates (e.g., `var` to `const`).
+    - **validate**: Logic guards (`verify`, `sanitize`, `enforce`).
+- **Dynamic Scoping**: Automatically infers scope from filename when directory-based scope is unavailable for single-file changes.
+
+### Optimized — Large Codebases
+- **Analysis Throttling**: Implemented line and size limits (300-line scannable limit per file) to prevent UI hangs on massive commits.
+- **Improved Performance**: Sequential file processing and reduced memory footprint during classification.
+
+### Fixed/Cleanup
+- Optimized `package.json` by removing redundant `activationEvents` as suggested by VS Code linting.
+
 ## [0.0.3] - 2026-03-10
 
 ### Fixed

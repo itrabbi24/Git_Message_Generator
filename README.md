@@ -47,16 +47,13 @@ Signals are combined using a probabilistic scoring formula. The highest-confiden
 
 | Capability | Detail |
 |---|---|
-| **11 commit types** | `feat` `fix` `docs` `style` `refactor` `perf` `test` `build` `ci` `chore` `revert` |
-| **Auto scope detection** | Inferred from folder structure (`auth`, `api`, `payments`, …) |
-| **`build(deps)` scope** | Auto-applied when only dependency or lock files changed |
-| **Rename-aware descriptions** | ≥95% similarity → `rename X to Y`; 50–94% → `rename and update X to Y` |
-| **Merge/revert skip** | Preserves git-generated messages automatically |
-| **Confidence UX tiers** | ≥80% silent · 50–79% info · <50% warning |
-| **Large commit warning** | >20 files triggers a split-commit suggestion |
-| **Staged + unstaged fallback** | Falls back to working-tree changes if nothing is staged |
-| **One-click + shortcut** | Button in Source Control panel · `Ctrl+Shift+G M` |
-| **Fully local** | No network calls, no telemetry, no API keys required |
+| **Human-Like Accuracy** | Extracts exact function/class names from diffs (e.g., `implement handleLogin`). |
+| **Nuanced Intelligence** | Content-aware verbs: `expose` (exports), `guard` (null checks), `modernize` (ES6+ updates), `validate` (logic guards). |
+| **Large Codebase Support** | Performance-throttled analysis (300-line limit per file) prevents UI hangs on massive diffs. |
+| **Dynamic Scoping** | Automatically uses filename as scope for single-file changes (e.g., `feat(authService): ...`). |
+| **11 Commit Types** | `feat` `fix` `docs` `style` `refactor` `perf` `test` `build` `ci` `chore` `revert`. |
+| **Rename Similarity** | Aware of file similarity (95%+ = rename, 50%+ = rename & update). |
+| **Fully Local** | No AI, no network calls, no telemetry. 100% privacy respected. |
 
 ---
 
@@ -210,6 +207,13 @@ Open VS Code Settings (`Ctrl+,`) and search for **Git Message Generator** to fin
 You can rebind this in **File → Preferences → Keyboard Shortcuts** by searching for `Generate Git Message`.
 
 ---
+
+## What's New in v0.0.4
+
+- **Professional Accuracy**: Now extracts the actual function and variable names you modified (identifies JS, TS, Python, and Go identifiers).
+- **Nuanced Intelligence**: Content-aware verbs like **expose** (new exports), **guard** (null checks), **modernize** (const/var updates), and **validate**.
+- **Large Repository Optimization**: Safe-mode analysis for massive commits and large files (throttles scanning after 300 lines).
+- **Dynamic Scoping**: Automatically infers scope from filenames if directory-based scope is unavailable.
 
 ## What's New in v0.0.3
 
