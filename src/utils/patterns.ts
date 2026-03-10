@@ -1,4 +1,4 @@
-import { CommitType, FileStatus } from "../types";
+import { CommitType } from "../types";
 
 export const TYPE_PRIORITY: CommitType[] = [
   "revert",
@@ -13,15 +13,6 @@ export const TYPE_PRIORITY: CommitType[] = [
   "feat",
   "chore"
 ];
-
-// Maps git file status letters to natural-language verbs
-export const STATUS_VERBS: Record<FileStatus, string> = {
-  A: "add",
-  M: "update",
-  D: "remove",
-  R: "rename",
-  C: "copy"
-};
 
 export const SOURCE_CODE_EXTENSIONS = new Set([
   ".ts",
@@ -260,7 +251,7 @@ export const PERF_PATTERNS: RegExp[] = [
 
 export const REFACTOR_PATTERNS: RegExp[] = [
   /^\+.*\b(extract|rename|restructure|cleanup|simplify)\b/i,
-  /^\-.*\b(extract|rename|restructure|cleanup|simplify)\b/i
+  /^-.*\b(extract|rename|restructure|cleanup|simplify)\b/i
 ];
 
 export const TEST_PATTERNS: RegExp[] = [

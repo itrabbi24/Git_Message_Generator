@@ -1,7 +1,8 @@
 import * as path from "path";
 import { AnalyzedFile, CommitType, FileStatus } from "../types";
 import { isDependencyFile, isLockFile } from "../utils/patterns";
-import { pickVerb, STATUS_VERBS } from "./verbSelector";
+import { STATUS_VERBS } from "../utils/statusVerbs";
+import { pickVerb } from "./verbSelector";
 
 function basename(filePath: string): string {
   return path.posix.basename(filePath.replace(/\\/g, "/"));

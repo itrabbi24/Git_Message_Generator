@@ -1,67 +1,62 @@
-# Changelog
+﻿# Changelog
 
-All notable changes to this project will be documented in this file.
+All notable changes to this project are documented in this file.
+
+## [Unreleased]
+
+### Added
+- Automated unit tests for diff parsing, scoring, scope detection, and message composition.
+- GitHub Actions CI workflow for lint, typecheck, build, test, and package validation.
+- New performance settings:
+  - `commitGen.maxAnalyzedLinesPerFile`
+  - `commitGen.maxContextsPerFile`
+
+### Changed
+- Scope detection logic extracted into `scopeCore` for better testability.
+- `STATUS_VERBS` deduplicated into a single shared utility.
+- Diff parsing now caps stored per-file lines and contexts while preserving true addition/deletion totals.
+
+### Removed
+- Tracked `.vsix` release artifacts from repository.
+
+## [0.1.1] - 2026-03-10
+
+### Added
+- Detailed multi-line commit body output.
+- Dynamic filename-based scope fallback for single-file commits.
+- Improved content-aware verb selection and rename wording.
+
+### Fixed
+- Git status refresh before change detection.
+- Better handling of staged vs unstaged fallback behavior.
 
 ## [0.1.0] - 2026-03-10
 
-### Added — Professional Accuracy
-- **Deep Identity Extraction**: Extension now identifies specific function and class names from diff content and hunk headers (JS, TS, Python, and Go).
-- **Nuanced Verbs**: Semantic verb selection based on code intent:
-    - **expose**: New `export` declarations.
-    - **guard**: Null checks (`?.`, `!== null`, etc.).
-    - **modernize**: ES6+ updates (e.g., `var` to `const`).
-    - **validate**: Logic guards (`verify`, `sanitize`, `enforce`).
-- **Detailed Multi-line Body**: New feature to generate a bulleted list of all changed files and their specific contexts (e.g., function names) in the commit body.
-- **Dynamic Scoping**: Automatically infers scope from filename when directory-based scope is unavailable for single-file changes.
+### Added
+- Four-layer signal pipeline for commit generation.
+- Conventional commit formatting with confidence score.
+- Path, diff-content, and metadata-based classification.
 
-### Performance Unlocked
-- **Unlimited Deep Analysis**: Removed all line-truncation (formerly 300 lines) and file-size limits. The extension now analyzes 100% of your changes for maximum accuracy.
-- **Removed Advisory Warnings**: Large commit warnings and thresholds have been removed to stay out of your way.
+## [0.0.4] - 2026-03-10
 
-### Fixed/Cleanup
-- Optimized `package.json` by removing redundant `activationEvents` as suggested by VS Code linting.
+### Changed
+- Heuristic quality and message generation improvements.
 
 ## [0.0.3] - 2026-03-10
 
+### Added
+- Rename and similarity-aware descriptions.
+- Revert handling and merge/revert skip behavior.
+
 ### Fixed
-- **Core bug**: call `repository.status()` before reading changes to fix "No staged changes found" appearing when changes exist
-- Added `status()` method to `Repository` type definition
-
-### Added — Detection Engine
-- `revert` commit type now recognized (skips auto-generation when git already provides a Revert message)
-- Merge commit detection: skips generation when inputBox already has "Merge …" message
-- **Layer 1 (file-path)**: Added `kubernetes/`, `k8s/`, `helm/`, `terraform/` → `build`; `__mocks__/`, `__fixtures__/` → `test`; `SECURITY`, `CODE_OF_CONDUCT` → `docs`; `.drone.yml`, `bitbucket-pipelines.yml` → `ci`; `.vue`, `.svelte` source extensions; `turbo.json`, `nx.json` → `build`
-- **Layer 2 (diff-content)**: Added 3:1 additions-to-deletions ratio signal → `feat` (0.40); reverse 3:1 ratio (mostly removals) → `chore` (0.35); `interface`, `type`, `enum` declarations detected as `feat`; `instanceof Error` guard → `fix`; Web Worker / `requestIdleCallback` → `perf`; `beforeEach`/`afterAll` → `test`; security patterns (`bcrypt`, `crypto.`) → `fix`
-- **Layer 3 (metadata)**: `build` signal (0.80) when all changed files are dependency manifests/lock files; aggregate 3:1 ratio across all files; homogeneous file-set signals (all docs, all tests, all CI, all style, all binary assets)
-- **Package.json content inspection**: distinguishes version bumps (`chore`), dependency entry changes (`build`), and script changes (`build`)
-- Comment-only diff → `docs` (0.58 confidence)
-
-### Added — Scope Detection
-- Auto-detects `deps` scope when all changed files are dependency/lock files → `build(deps): update dependencies`
-- Dominant scope (>60% of files) now used for monorepo packages rather than comma-listing
-- Extended `MEANINGFUL_DIRS` with 20+ more directory names (features, pages, components, context, handlers, workers, etc.)
-
-### Added — Message Generation
-- **Rename similarity-aware descriptions**: ≥95% similarity → `rename X to Y`; 50–94% → `rename and update X to Y`; <50% treated as delete+add
-- **Content-aware verb selection**: catch block → `handle`; optional chaining → `guard`; useMemo → `memoize`; dynamic import → `lazy-load`; debounce → `debounce`
-- **Status-aware verbs**: A → `add`, M → `update`, D → `remove`, R → `rename`
-- **Large commit handling**: >20 files with no scope → `update multiple modules`; >20 files shows split-commit warning
-- Function context from `@@` hunk headers used in single-file descriptions for `fix`, `perf`, `refactor`, `feat`
-
-### Added — UX
-- Confidence threshold tiers (PDF spec): ≥80% → silent; 50–79% → info notification; <50% → warning notification
-- Large commit warning (>20 files) suggests splitting into focused commits
+- "No staged changes found" false negative issue.
 
 ## [0.0.2] - 2026-03-10
 
-- Added fallback generation from unstaged working-tree changes when no staged files exist
-- Added `commitGen.includeWorkingTreeWhenNoStaged` setting (default `true`)
-- Improved Marketplace metadata and packaging details
+### Added
+- Fallback generation from working-tree changes.
 
 ## [0.0.1] - 2026-03-10
 
-- Initial public release
-- Added VS Code command to generate commit messages from staged Git changes
-- Added path-based, diff-based, and metadata-based classification
-- Added scope detection and conventional commit formatting
-- Added VSIX packaging support and repository documentation
+### Added
+- Initial release.

@@ -66,6 +66,18 @@
           "minimum": 20,
           "description": "Maximum generated conventional commit header length."
         },
+        "commitGen.maxAnalyzedLinesPerFile": {
+          "type": "integer",
+          "default": 1200,
+          "minimum": 100,
+          "description": "Maximum added/removed diff lines to keep in memory per file during analysis."
+        },
+        "commitGen.maxContextsPerFile": {
+          "type": "integer",
+          "default": 12,
+          "minimum": 1,
+          "description": "Maximum number of extracted function/class contexts per file."
+        },
         "commitGen.scopeMapping": {
           "type": "object",
           "default": {},
@@ -96,13 +108,25 @@
   },
   "scripts": {
     "build": "tsc -p .",
+    "typecheck": "tsc -p . --noEmit",
     "watch": "tsc -w -p .",
-    "package": "npx @vscode/vsce package"
+    "test": "tsx --test test/commitScorer.test.ts test/diffAnalyzer.test.ts test/messageComposer.test.ts test/scopeCore.test.ts",
+    "lint": "eslint . --ext .ts",
+    "format": "prettier --check .",
+    "format:write": "prettier --write .",
+    "package": "npx @vscode/vsce package",
+    "package:check": "npx @vscode/vsce package --no-yarn"
   },
   "devDependencies": {
     "@types/node": "^22.13.11",
     "@types/vscode": "^1.95.0",
+    "@typescript-eslint/eslint-plugin": "^8.46.0",
+    "@typescript-eslint/parser": "^8.46.0",
     "@vscode/vsce": "^3.7.1",
+    "eslint": "^8.57.1",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "^3.6.2",
+    "tsx": "^4.20.6",
     "typescript": "^5.8.2"
   },
   "dependencies": {

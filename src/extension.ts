@@ -1,4 +1,4 @@
-import * as vscode from "vscode";
+﻿import * as vscode from "vscode";
 import * as path from "path";
 import { classifyByPath, defaultSourceType } from "./analyzer/fileClassifier";
 import { parseFiles } from "./analyzer/diffAnalyzer";
@@ -9,7 +9,7 @@ import { buildMessage, composeBody, composeDescription } from "./generator/messa
 import { Status } from "./git/git";
 import { getChangeContext } from "./git/gitService";
 import { combineScores, resolveType } from "./scorer/commitScorer";
-import { AnalyzedFile, FileStatus, GenerationResult, MetadataResult, Signal } from "./types";
+import { AnalyzedFile, FileStatus, GenerationResult, MetadataResult } from "./types";
 
 function normalizeRepoRelative(rootPath: string, filePath: vscode.Uri): string {
   return path.relative(rootPath, filePath.fsPath).replace(/\\/g, "/");
@@ -53,9 +53,11 @@ function mergeSignals(files: AnalyzedFile[], metadata: MetadataResult): Generati
 
   const scores = combineScores(allSignals);
   const resolved = resolveType(scores);
-  let scope = detectScope(files.map((file) => file.path), metadata.isDepsOnly);
+  let scope = detectScope(
+    files.map((file) => file.path),
+    metadata.isDepsOnly
+  );
 
-  // Dynamic scoping for single-file changes: use the filename if no directory scope found
   if (!scope && files.length === 1 && !files[0].isBinary) {
     const filename = path.posix.basename(files[0].path);
     const dot = filename.lastIndexOf(".");
@@ -89,10 +91,9 @@ async function generateCommitMessage(): Promise<void> {
     return;
   }
 
-  // Skip generation for merge/revert commits — git already provides these messages
   const existingMessage = changeContext.repository.inputBox.value ?? "";
   if (existingMessage.startsWith("Merge ") || existingMessage.startsWith('Revert "')) {
-    vscode.window.showInformationMessage("Merge/revert commit detected — keeping existing message.");
+    vscode.window.showInformationMessage("Merge/revert commit detected - keeping existing message.");
     return;
   }
 
@@ -101,7 +102,10 @@ async function generateCommitMessage(): Promise<void> {
     return;
   }
 
-  const parsedFiles = parseFiles(changeContext.rawDiff);
+  const parsedFiles = parseFiles(changeContext.rawDiff, {
+    maxLinesPerFile: config.maxAnalyzedLinesPerFile,
+    maxContextsPerFile: config.maxContextsPerFile
+  });
   const fileMap = new Map(parsedFiles.map((file) => [file.path, file] as const));
 
   const analyzedFiles: AnalyzedFile[] = changeContext.changes.map((change) => {
@@ -113,7 +117,9 @@ async function generateCommitMessage(): Promise<void> {
       status === "R" && renameReference ? normalizeRepoRelative(rootPath, renameReference) : undefined;
     const existing =
       fileMap.get(relativePath) ??
-      (previousPath ? fileMap.get(previousPath) : undefined) ?? {
+      (previousPath
+        ? fileMap.get(previousPath)
+        : undefined) ?? {
         path: relativePath,
         previousPath,
         status,
@@ -148,17 +154,15 @@ async function generateCommitMessage(): Promise<void> {
   if (config.showConfidence) {
     const percent = Math.round(result.confidence * 100);
     const sourceLabel = changeContext.source === "workingTree" ? " (unstaged)" : "";
-    // Confidence threshold UX (PDF spec):
-    // ≥80%: silent auto-fill, 50–79%: info note, <50%: warning
+
     if (result.confidence >= 0.8) {
-      // High confidence — no notification needed, message is already set
       return;
     }
     if (result.confidence >= 0.5) {
       vscode.window.showInformationMessage(`Generated${sourceLabel}: ${result.message} (${percent}% confidence)`);
     } else {
       vscode.window.showWarningMessage(
-        `Low confidence (${percent}%) — generated: ${result.message}. Please review before committing.`
+        `Low confidence (${percent}%) - generated: ${result.message}. Please review before committing.`
       );
     }
   }
@@ -177,4 +181,4 @@ export function activate(context: vscode.ExtensionContext): void {
   );
 }
 
-export function deactivate(): void { }
+export function deactivate(): void {}

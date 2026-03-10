@@ -1,4 +1,4 @@
-import { AnalyzedFile, CommitType, FileStatus } from "../types";
+import { AnalyzedFile, CommitType } from "../types";
 
 const TYPE_VERBS: Record<CommitType, string[]> = {
   feat: ["add", "implement", "introduce", "expose"],
@@ -12,15 +12,6 @@ const TYPE_VERBS: Record<CommitType, string[]> = {
   ci: ["add", "update", "configure"],
   chore: ["update", "maintain", "adjust", "remove"],
   revert: ["undo", "restore", "roll back"]
-};
-
-// Maps git file status to a natural-language verb
-export const STATUS_VERBS: Record<FileStatus, string> = {
-  A: "add",
-  M: "update",
-  D: "remove",
-  R: "rename",
-  C: "copy"
 };
 
 /**

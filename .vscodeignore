@@ -1,8 +1,16 @@
 src/**
 .vscode/**
 .gitignore
+.github/**
+.claude/**
+test/**
+.eslintrc.cjs
+.prettierrc.json
+CONTRIBUTING.md
+CODE_OF_CONDUCT.md
 tsconfig.json
 vs-code-ex.pdf
 vs-code-ex.txt
 node_modules/.bin/**
+*.vsix
 **/*.map

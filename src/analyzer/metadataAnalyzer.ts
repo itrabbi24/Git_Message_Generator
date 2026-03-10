@@ -1,4 +1,4 @@
-import { Change, Status } from "../git/git";
+﻿import { Change, Status } from "../git/git";
 import { AnalyzedFile, MetadataResult, Signal } from "../types";
 import { isBinaryFile, isCiFile, isDependencyFile, isDocsFile, isLockFile, isStyleFile, isTestFile } from "../utils/patterns";
 
@@ -33,10 +33,7 @@ export function analyzeMetadata(changes: Change[], files: AnalyzedFile[]): Metad
   const allDeleted = statuses.every((status) => isDeletedStatus(status));
   const hasRename = statuses.some((status) => isRenamedStatus(status));
 
-  // Deps-only: every file is a dependency manifest or lock file
-  const isDepsOnly =
-    files.length > 0 &&
-    files.every((file) => isDependencyFile(file.path) || isLockFile(file.path));
+  const isDepsOnly = files.length > 0 && files.every((file) => isDependencyFile(file.path) || isLockFile(file.path));
 
   const signals: Signal[] = [];
   if (allAdded) {
@@ -49,7 +46,6 @@ export function analyzeMetadata(changes: Change[], files: AnalyzedFile[]): Metad
     signals.push({ type: "refactor", source: "metadata", weight: 0.7, reason: "rename detected" });
   }
 
-  // Deps-only → build 0.80 (PDF spec: "Only package.json dependencies changed → build(deps) 0.80")
   if (isDepsOnly) {
     signals.push({ type: "build", source: "metadata", weight: 0.8, reason: "only dependency files changed" });
   }
@@ -77,7 +73,6 @@ export function analyzeMetadata(changes: Change[], files: AnalyzedFile[]): Metad
       signals.push({ type: "chore", source: "metadata", weight: 0.72, reason: "binary asset-only change set" });
     }
 
-    // Additions >> deletions across all source files (PDF: ratio > 3:1 → feat 0.40)
     const additions = files.reduce((sum, file) => sum + file.additions, 0);
     const deletions = files.reduce((sum, file) => sum + file.deletions, 0);
     if (additions > deletions * 3 && additions > 20) {
