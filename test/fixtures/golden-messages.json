@@ -59,7 +59,7 @@
         "renameSimilarity": 20
       }
     ],
-    "expectedHeader": "refactor(core): remove legacyEngine.ts and add newEngine.ts"
+    "expectedHeader": "refactor(core): remove legacyEngine and add newEngine"
   },
   {
     "name": "deps_version_bump",
@@ -87,7 +87,7 @@
       { "path": ".github/workflows/ci.yml", "status": "M" },
       { "path": ".github/workflows/release.yml", "status": "M" }
     ],
-    "expectedHeader": "ci: update ci.yml, release.yml"
+    "expectedHeader": "ci: update ci, release"
   },
   {
     "name": "concise_style_many_files",

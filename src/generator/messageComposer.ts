@@ -9,6 +9,14 @@ function basename(filePath: string): string {
   return path.posix.basename(filePath.replace(/\\/g, "/"));
 }
 
+function displayName(filePath: string): string {
+  const base = basename(filePath);
+  if (base.startsWith(".")) return base; // dotfiles: keep as-is
+  const dot = base.lastIndexOf(".");
+  if (dot <= 0) return base; // no extension
+  return base.slice(0, dot); // strip last extension for readability
+}
+
 function categoryNoun(type: CommitType): string {
   switch (type) {
     case "docs":
@@ -137,7 +145,10 @@ function summarizeAreas(files: AnalyzedFile[], maxAreas: number): string {
     .sort((a, b) => b[1] - a[1])
     .slice(0, maxAreas)
     .map(([area]) => area);
-  return top.join("+");
+  if (top.length === 0) return "";
+  if (top.length === 1) return top[0];
+  if (top.length === 2) return `${top[0]} and ${top[1]}`;
+  return `${top.slice(0, -1).join(", ")} and ${top[top.length - 1]}`;
 }
 
 export function composeDescription(
@@ -173,8 +184,8 @@ export function composeDescription(
     // Rename: similarity-aware description (PDF spec)
     if (file.status === "R" && file.previousPath) {
       const sim = file.renameSimilarity ?? 100;
-      const fromName = basename(file.previousPath);
-      const toName = basename(file.path);
+      const fromName = displayName(file.previousPath);
+      const toName = displayName(file.path);
       if (sim >= 95) {
         return `rename ${fromName} to ${toName}`;
       }
@@ -197,7 +208,7 @@ export function composeDescription(
       return `${verb} ${context}`;
     }
 
-    return `${verb} ${basename(file.path)}`;
+    return `${verb} ${displayName(file.path)}`;
   }
 
   if (files.length <= 3) {
@@ -207,7 +218,7 @@ export function composeDescription(
       : sameStatus
       ? (STATUS_VERBS[ranked[0].status] ?? pickVerb(commitType, files.length, files))
       : pickVerb(commitType, files.length, files);
-    const names = unique(ranked.map((file) => basename(file.path)));
+    const names = unique(ranked.map((file) => displayName(file.path)));
     return `${verb} ${names.join(", ")}`;
   }
 
@@ -282,9 +293,9 @@ export function composeBody(files: AnalyzedFile[], commitType: CommitType, optio
         break;
       }
       const verb = confidence < 0.5 ? "update" : pickVerb(commitType, moduleFiles.length, moduleFiles);
-      const names = unique(moduleFiles.map((file) => basename(file.path))).slice(0, style === "concise" ? 2 : 4);
+      const names = unique(moduleFiles.map((file) => displayName(file.path))).slice(0, style === "concise" ? 2 : 4);
       const remaining = moduleFiles.length - names.length;
-      const suffix = remaining > 0 ? ` +${remaining}` : "";
+      const suffix = remaining > 0 ? ` (+${remaining} more)` : "";
       lines.push(`- ${verb} ${module}: ${names.join(", ")}${suffix}`);
       coveredFiles += moduleFiles.length;
     }
@@ -294,7 +305,7 @@ export function composeBody(files: AnalyzedFile[], commitType: CommitType, optio
       break;
     }
     const verb = confidence < 0.5 ? neutralVerbForStatus(file.status) : statusVerb(file.status, commitType, files.length);
-    const name = basename(file.path);
+    const name = displayName(file.path);
     // Keep body concise: dedupe noisy contexts and keep only top N tokens per file.
     const contexts =
       maxContextsPerFile > 0

@@ -45,7 +45,7 @@ test("composeDescription uses rename wording for high similarity", () => {
     })
   ];
   const description = composeDescription(files, "refactor", "auth");
-  assert.equal(description, "rename oldName.ts to newName.ts");
+  assert.equal(description, "rename oldName to newName");
 });
 
 test("composeDescription uses delete-add wording for low similarity rename", () => {
@@ -58,7 +58,7 @@ test("composeDescription uses delete-add wording for low similarity rename", () 
     })
   ];
   const description = composeDescription(files, "refactor", "auth");
-  assert.equal(description, "remove legacy.ts and add new-auth.ts");
+  assert.equal(description, "remove legacy and add new-auth");
 });
 
 test("composeDescription summarizes many files", () => {
@@ -89,7 +89,7 @@ test("composeDescription falls back to core modules for multi-scope commits", ()
     createFile({ path: "scripts/release.ts" })
   ];
   const description = composeDescription(files, "feat", null);
-  assert.equal(description, "implement src+docs modules");
+  assert.equal(description, "implement src and docs modules");
 });
 
 test("composeDescription supports concise style", () => {
@@ -117,14 +117,14 @@ test("composeBody compacts contexts and caps line count", () => {
   const body = composeBody(files, "feat", { maxLines: 3, maxContextsPerFile: 2 });
   const lines = body.split("\n");
   assert.equal(lines.length, 4);
-  assert.equal(lines[0], "- add a.ts: saveUser, validateUser");
+  assert.equal(lines[0], "- add a: saveUser, validateUser");
   assert.equal(lines[3], "- and 1 more file");
 });
 
 test("composeBody drops contexts for low confidence", () => {
   const files = [createFile({ path: "src/a.ts", functionContexts: ["saveUser"] })];
   const body = composeBody(files, "feat", { confidence: 0.2 });
-  assert.equal(body, "- update a.ts");
+  assert.equal(body, "- update a");
 });
 
 test("composeBody groups larger changes by module", () => {

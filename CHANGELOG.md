@@ -10,6 +10,13 @@ All notable changes to this project are documented in this file.
 ### Changed
 - TBD
 
+## [0.2.1] - 2026-03-17
+
+### Changed
+- Strip file extensions from filenames in generated commit message headers and body for cleaner, more human-readable output (e.g. `add messageComposer, verbSelector` instead of `add messageComposer.ts, verbSelector.ts`)
+- Join multi-area summaries with natural English `and` instead of `+` (e.g. `update src and test modules` instead of `update src+test modules`)
+- Improve grouped body overflow suffix from ` +N` to ` (+N more)` for clarity
+
 ## [0.2.0] - 2026-03-10
 
 ### Added
