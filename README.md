@@ -4,7 +4,7 @@
 
 **Automatic conventional commit messages inside VS Code.**
 
-[![version](https://img.shields.io/badge/version-v0.2.0-0078D7?style=flat-square)](./CHANGELOG.md)
+[![version](https://img.shields.io/badge/version-v0.2.1-0078D7?style=flat-square)](./CHANGELOG.md)
 [![Marketplace](https://img.shields.io/visual-studio-marketplace/v/argrabbi.git-message-generator-by-arg-rabbi?label=Marketplace&style=flat-square&color=0078D7)](https://marketplace.visualstudio.com/items?itemName=ARGRABBI.git-message-generator-by-arg-rabbi)
 [![downloads](https://img.shields.io/visual-studio-marketplace/d/argrabbi.git-message-generator-by-arg-rabbi?label=downloads&style=flat-square&color=44CC11)](https://marketplace.visualstudio.com/items?itemName=ARGRABBI.git-message-generator-by-arg-rabbi)
 [![rating](https://img.shields.io/visual-studio-marketplace/r/argrabbi.git-message-generator-by-arg-rabbi?label=rating&style=flat-square&color=F0C040)](https://marketplace.visualstudio.com/items?itemName=ARGRABBI.git-message-generator-by-arg-rabbi)
